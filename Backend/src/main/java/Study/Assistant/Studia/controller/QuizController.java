@@ -19,6 +19,24 @@ public class QuizController {
     private final QuizService quizService;
     
     /**
+     * 퀴즈 목록 조회
+     */
+    @GetMapping
+    public ResponseEntity<List<Study.Assistant.Studia.dto.response.QuizResponse>> getQuizzes() {
+        List<Study.Assistant.Studia.dto.response.QuizResponse> quizzes = quizService.getUserQuizzes();
+        return ResponseEntity.ok(quizzes);
+    }
+    
+    /**
+     * 특정 퀴즈 상세 조회
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<Study.Assistant.Studia.dto.response.QuizDetailResponse> getQuiz(@PathVariable Long id) {
+        Study.Assistant.Studia.dto.response.QuizDetailResponse quiz = quizService.getQuizDetail(id);
+        return ResponseEntity.ok(quiz);
+    }
+    
+    /**
      * 퀴즈 시도 제출
      */
     @PostMapping("/{quizId}/attempts")

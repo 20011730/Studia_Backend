@@ -34,6 +34,15 @@ public class AIService {
     @Value("${ai.model:openai}")
     private String preferredModel;
     
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        log.info("AI Service initialized with model: {}", preferredModel);
+        log.info("OpenAI API Key configured: {}", !openAiApiKey.isEmpty());
+        if (!openAiApiKey.isEmpty()) {
+            log.info("OpenAI API Key length: {}", openAiApiKey.length());
+        }
+    }
+    
     public String generateSummary(String content) {
         String prompt = """
             다음 내용을 한국어로 체계적으로 요약해주세요.

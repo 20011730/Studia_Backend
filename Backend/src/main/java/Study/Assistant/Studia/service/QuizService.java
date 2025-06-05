@@ -2,9 +2,7 @@ package Study.Assistant.Studia.service;
 
 import Study.Assistant.Studia.domain.entity.*;
 import Study.Assistant.Studia.dto.request.QuizAttemptRequest;
-import Study.Assistant.Studia.dto.response.QuizAttemptResponse;
-import Study.Assistant.Studia.dto.response.QuizReviewResponse;
-import Study.Assistant.Studia.dto.response.WrongAnswerNoteResponse;
+import Study.Assistant.Studia.dto.response.*;
 import Study.Assistant.Studia.repository.QuizAttemptRepository;
 import Study.Assistant.Studia.repository.QuizRepository;
 import Study.Assistant.Studia.repository.UserRepository;
@@ -15,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,37 +29,146 @@ public class QuizService {
     private final UserRepository userRepository;
     
     /**
+     * 사용자의 퀴즈 목록 조회
+     */
+    public List<Study.Assistant.Studia.dto.response.QuizResponse> getUserQuizzes() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<Quiz> quizzes = quizRepository.findByStudyMaterial_UserId(user.getId());
+        
+        // 퀴즈별로 그룹화하여 StudyMaterial별 퀴즈 그룹 생성
+        Map<Long, List<Quiz>> quizzesByMaterial = quizzes.stream()
+                .collect(Collectors.groupingBy(q -> q.getStudyMaterial().getId()));
+        
+        return quizzesByMaterial.entrySet().stream()
+                .map(entry -> {
+                    StudyMaterial material = quizzes.stream()
+                            .filter(q -> q.getStudyMaterial().getId().equals(entry.getKey()))
+                            .findFirst()
+                            .map(Quiz::getStudyMaterial)
+                            .orElse(null);
+                    
+                    if (material == null) return null;
+                    
+                    return Study.Assistant.Studia.dto.response.QuizResponse.builder()
+                            .id(entry.getKey()) // Material ID as quiz group ID
+                            .title(material.getTitle() + " Quiz")
+                            .material(Study.Assistant.Studia.dto.response.MaterialSummaryResponse.builder()
+                                    .id(material.getId())
+                                    .title(material.getTitle())
+                                    .originalFileName(material.getOriginalFileName())
+                                    .build())
+                            .questions(entry.getValue())
+                            .attempts(quizAttemptRepository.countByUserIdAndQuiz_StudyMaterial_Id(
+                                    user.getId(), material.getId()))
+                            .build();
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 특정 퀴즈 상세 조회
+     */
+    public Study.Assistant.Studia.dto.response.QuizDetailResponse getQuizDetail(Long materialId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<Quiz> quizzes = quizRepository.findByStudyMaterial_IdAndStudyMaterial_UserId(materialId, user.getId());
+        
+        if (quizzes.isEmpty()) {
+            throw new RuntimeException("Quiz not found");
+        }
+        
+        StudyMaterial material = quizzes.get(0).getStudyMaterial();
+        
+        List<Study.Assistant.Studia.dto.response.QuizDetailResponse.QuestionDetail> questions = quizzes.stream()
+                .map(quiz -> Study.Assistant.Studia.dto.response.QuizDetailResponse.QuestionDetail.builder()
+                        .id(quiz.getId())
+                        .questionText(quiz.getQuestion())
+                        .questionType(quiz.getQuestionType().toString())
+                        .difficulty(quiz.getDifficulty().toString())
+                        .options(quiz.getOptions())
+                        .correctOption(quiz.getOptions().indexOf(quiz.getCorrectAnswer()))
+                        .explanation(quiz.getExplanation())
+                        .hint(quiz.getHint())
+                        .category(quiz.getCategory())
+                        .build())
+                .collect(Collectors.toList());
+        
+        return Study.Assistant.Studia.dto.response.QuizDetailResponse.builder()
+                .id(materialId)
+                .title(material.getTitle() + " Quiz")
+                .questions(questions)
+                .totalQuestions(questions.size())
+                .estimatedTime(questions.size() * 2) // 2 minutes per question estimate
+                .build();
+    }
+    
+    /**
      * 퀴즈 시도 제출 및 채점
      */
-    public QuizAttemptResponse submitAttempt(Long quizId, QuizAttemptRequest request) {
+    public QuizAttemptResponse submitAttempt(Long materialId, QuizAttemptRequest request) {
         // 사용자 정보 가져오기
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
-        // 퀴즈 정보 가져오기
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+        // 해당 material의 모든 퀴즈 가져오기
+        List<Quiz> quizzes = quizRepository.findByStudyMaterial_IdAndStudyMaterial_UserId(materialId, user.getId());
         
-        // 정답 확인
-        boolean isCorrect = quiz.getCorrectAnswer().equalsIgnoreCase(request.getUserAnswer());
+        if (quizzes.isEmpty()) {
+            throw new RuntimeException("No quizzes found for this material");
+        }
         
-        // 점수 계산 (난이도에 따라 다른 점수)
-        int score = calculateScore(quiz.getDifficulty(), isCorrect);
+        int totalScore = 0;
+        int correctCount = 0;
+        List<QuizAttempt> attempts = new ArrayList<>();
         
-        // 시도 기록 저장
-        QuizAttempt attempt = QuizAttempt.builder()
-                .quiz(quiz)
-                .user(user)
-                .userAnswer(request.getUserAnswer())
-                .isCorrect(isCorrect)
-                .score(score)
-                .attemptedAt(LocalDateTime.now())
+        // 각 답변 처리
+        for (QuizAttemptRequest.Answer answer : request.getAnswers()) {
+            Quiz quiz = quizzes.stream()
+                    .filter(q -> q.getId().equals(answer.getQuestionId()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Quiz not found: " + answer.getQuestionId()));
+            
+            String userAnswer = answer.getSelectedOption() >= 0 && answer.getSelectedOption() < quiz.getOptions().size() 
+                    ? quiz.getOptions().get(answer.getSelectedOption()) 
+                    : "";
+            
+            boolean isCorrect = quiz.getCorrectAnswer().equals(userAnswer);
+            int score = calculateScore(quiz.getDifficulty(), isCorrect);
+            
+            if (isCorrect) {
+                correctCount++;
+            }
+            totalScore += score;
+            
+            // 시도 기록 저장
+            QuizAttempt attempt = QuizAttempt.builder()
+                    .quiz(quiz)
+                    .user(user)
+                    .userAnswer(userAnswer)
+                    .isCorrect(isCorrect)
+                    .score(score)
+                    .attemptedAt(LocalDateTime.now())
+                    .build();
+            
+            attempts.add(attempt);
+        }
+        
+        // 모든 시도 저장
+        quizAttemptRepository.saveAll(attempts);
+        
+        // 전체 결과 반환
+        return QuizAttemptResponse.builder()
+                .score(correctCount)
+                .total(quizzes.size())
+                .percentage((double) correctCount / quizzes.size() * 100)
                 .build();
-        
-        attempt = quizAttemptRepository.save(attempt);
-        
-        return convertToAttemptResponse(attempt);
     }
     
     /**

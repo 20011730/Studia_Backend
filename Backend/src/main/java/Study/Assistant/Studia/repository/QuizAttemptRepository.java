@@ -62,4 +62,19 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
     
     // 사용자가 특정 퀴즈를 시도한 횟수
     Integer countByUserIdAndQuizId(Long userId, Long quizId);
+    
+    // 사용자가 특정 자료의 퀴즈를 시도한 횟수
+    @Query("SELECT COUNT(qa) FROM QuizAttempt qa " +
+           "JOIN qa.quiz q " +
+           "WHERE qa.user.id = :userId " +
+           "AND q.studyMaterial.id = :materialId")
+    Integer countByUserIdAndQuiz_StudyMaterial_Id(
+            @Param("userId") Long userId, 
+            @Param("materialId") Long materialId);
+    
+    // 사용자의 모든 퀴즈 시도 조회
+    List<QuizAttempt> findByUserId(Long userId);
+    
+    // 사용자의 모든 퀴즈 시도를 최신순으로 조회
+    List<QuizAttempt> findByUserIdOrderByAttemptedAtDesc(Long userId);
 }

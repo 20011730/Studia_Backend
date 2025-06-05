@@ -13,12 +13,18 @@ import java.util.List;
 @Builder
 public class QuizResponse {
     private Long id;
+    private String title;
+    private MaterialSummaryResponse material;
+    private List<Study.Assistant.Studia.domain.entity.Quiz> questions;
+    private int attempts;
+    
+    // 개별 퀴즈 문제용 (기존 필드 유지)
     private String question;
     private String questionType;
     private String difficulty;
     private List<String> options;
     private String correctAnswer;
     private String explanation;
-    private String category; // 문제 카테고리 추가
-    private String hint; // 힌트 추가
+    private String category;
+    private String hint;
 }

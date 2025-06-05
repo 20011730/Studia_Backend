@@ -54,3 +54,6 @@ logging:
     name: /var/log/studia/application.log
     max-size: 10MB
     max-history: 30
+
+openai:
+  api-key: ${OPENAI_API_KEY}
