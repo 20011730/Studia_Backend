@@ -1,0 +1,194 @@
+package Study.Assistant.Studia.service;
+
+import Study.Assistant.Studia.domain.entity.Quiz;
+import Study.Assistant.Studia.domain.entity.StudyMaterial;
+import Study.Assistant.Studia.domain.entity.User;
+import Study.Assistant.Studia.dto.response.MaterialSummaryResponse;
+import Study.Assistant.Studia.dto.response.QuizResponse;
+import Study.Assistant.Studia.repository.StudyMaterialRepository;
+import Study.Assistant.Studia.repository.QuizRepository;
+import Study.Assistant.Studia.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional
+public class StudyMaterialService {
+    
+    private final StudyMaterialRepository studyMaterialRepository;
+    private final QuizRepository quizRepository;
+    private final FileProcessingService fileProcessingService;
+    private final AIService aiService;
+    private final UserRepository userRepository;
+    
+    public MaterialSummaryResponse processMaterial(MultipartFile file, Long courseId, String title) {
+        try {
+            // 1. 파일에서 텍스트 추출
+            String content = fileProcessingService.extractTextFromFile(file);
+            
+            // 2. 현재 로그인한 사용자 정보 가져오기
+            org.springframework.security.core.Authentication auth = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            // 3. StudyMaterial 엔티티 생성 및 저장
+            StudyMaterial material = StudyMaterial.builder()
+                    .title(title)
+                    .originalFileName(file.getOriginalFilename())
+                    .storedFileName(java.util.UUID.randomUUID().toString() + "_" + file.getOriginalFilename())
+                    .fileType(file.getContentType())
+                    .fileSize(file.getSize())
+                    .rawContent(content)
+                    .status(StudyMaterial.ProcessingStatus.PROCESSING)
+                    .user(user)
+                    .build();
+            
+            material = studyMaterialRepository.save(material);
+            
+            // 3. AI를 사용하여 요약 생성
+            String summary = aiService.generateSummary(content);
+            material.setSummary(summary);
+            
+            // 4. 핵심 포인트 추출
+            List<String> keyPoints = aiService.extractKeyPoints(content);
+            material.setKeyPoints(String.join("\n", keyPoints));
+            material.setStatus(StudyMaterial.ProcessingStatus.COMPLETED);
+            material.setProcessedAt(LocalDateTime.now());
+            
+            material = studyMaterialRepository.save(material);
+            
+            return convertToResponse(material);
+            
+        } catch (IOException e) {
+            log.error("Error processing file: {}", e.getMessage());
+            throw new RuntimeException("Failed to process file", e);
+        }
+    }
+    
+    public List<MaterialSummaryResponse> getUserMaterials(Long courseId) {
+        // 현재 로그인한 사용자 정보 가져오기
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Long userId = user.getId();
+        
+        List<StudyMaterial> materials;
+        if (courseId != null) {
+            materials = studyMaterialRepository.findByUserIdAndCourseId(userId, courseId);
+        } else {
+            materials = studyMaterialRepository.findByUserId(userId);
+        }
+        
+        return materials.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+    
+    public MaterialSummaryResponse getMaterial(Long id) {
+        StudyMaterial material = studyMaterialRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        return convertToResponse(material);
+    }
+    
+    public List<QuizResponse> generateQuizzes(Long materialId, String difficulty, int count) {
+        // 퀴즈 개수 검증 (5-50개)
+        if (count < 5 || count > 50) {
+            throw new IllegalArgumentException("퀴즈 개수는 5개에서 50개 사이여야 합니다.");
+        }
+        
+        StudyMaterial material = studyMaterialRepository.findById(materialId)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        
+        // AI를 사용하여 퀴즈 생성
+        List<Map<String, Object>> quizData = aiService.generateQuizzes(
+                material.getRawContent(), 
+                count, 
+                difficulty
+        );
+        
+        List<Quiz> quizzes = new ArrayList<>();
+        for (Map<String, Object> data : quizData) {
+            Quiz quiz = Quiz.builder()
+                    .studyMaterial(material)
+                    .question((String) data.get("question"))
+                    .questionType(Quiz.QuestionType.MULTIPLE_CHOICE)
+                    .difficulty(Quiz.Difficulty.valueOf(difficulty.toUpperCase()))
+                    .correctAnswer((String) data.get("correctAnswer"))
+                    .explanation((String) data.get("explanation"))
+                    .build();
+            
+            // 선택지 설정
+            if (data.get("options") instanceof List) {
+                quiz.setOptions((List<String>) data.get("options"));
+            }
+            
+            // 카테고리와 힌트 추가
+            if (data.containsKey("category")) {
+                quiz.setCategory((String) data.get("category"));
+            }
+            if (data.containsKey("hint")) {
+                quiz.setHint((String) data.get("hint"));
+            }
+            
+            quizzes.add(quiz);
+        }
+        
+        // 생성된 퀴즈 저장
+        quizzes = quizRepository.saveAll(quizzes);
+        
+        return quizzes.stream()
+                .map(this::convertToQuizResponse)
+                .collect(Collectors.toList());
+    }
+    
+    public void deleteMaterial(Long id) {
+        studyMaterialRepository.deleteById(id);
+    }
+    
+    private MaterialSummaryResponse convertToResponse(StudyMaterial material) {
+        return MaterialSummaryResponse.builder()
+                .id(material.getId())
+                .title(material.getTitle())
+                .originalFileName(material.getOriginalFileName())
+                .fileType(material.getFileType())
+                .fileSize(material.getFileSize())
+                .summary(material.getSummary())
+                .keyPoints(material.getKeyPoints())
+                .status(material.getStatus().toString())
+                .courseId(material.getCourse() != null ? material.getCourse().getId() : null)
+                .courseName(material.getCourse() != null ? material.getCourse().getCourseName() : null)
+                .createdAt(material.getCreatedAt())
+                .processedAt(material.getProcessedAt())
+                .build();
+    }
+    
+    private QuizResponse convertToQuizResponse(Quiz quiz) {
+        return QuizResponse.builder()
+                .id(quiz.getId())
+                .question(quiz.getQuestion())
+                .questionType(quiz.getQuestionType().toString())
+                .difficulty(quiz.getDifficulty().toString())
+                .options(quiz.getOptions())
+                .correctAnswer(quiz.getCorrectAnswer())
+                .explanation(quiz.getExplanation())
+                .category(quiz.getCategory())
+                .hint(quiz.getHint())
+                .build();
+    }
+}

@@ -1,0 +1,48 @@
+# Spring Boot 핵심 개념 정리
+
+## 1. Spring Boot란?
+Spring Boot는 Spring Framework를 기반으로 한 프레임워크로, 복잡한 XML 설정 없이 빠르게 Spring 애플리케이션을 개발할 수 있도록 도와줍니다.
+
+### 주요 특징
+- 자동 설정(Auto Configuration)
+- 내장 서버(Embedded Server) 지원
+- 의존성 관리 간소화
+- 실행 가능한 JAR 파일 생성
+
+## 2. 의존성 주입(Dependency Injection)
+Spring의 핵심 개념 중 하나로, 객체 간의 의존 관계를 외부에서 주입하는 디자인 패턴입니다.
+
+### 주요 어노테이션
+- @Component: 일반적인 컴포넌트 클래스
+- @Service: 비즈니스 로직을 담당하는 서비스 클래스
+- @Repository: 데이터 접근 계층 클래스
+- @Controller: 웹 요청을 처리하는 컨트롤러 클래스
+
+## 3. JPA (Java Persistence API)
+자바 진영의 ORM 표준으로, 객체와 데이터베이스 테이블을 매핑해줍니다.
+
+### 주요 개념
+- Entity: 데이터베이스 테이블과 매핑되는 클래스
+- Repository: 데이터 접근 인터페이스
+- JPQL: 객체 지향 쿼리 언어
+
+## 4. Spring Security
+애플리케이션의 보안을 담당하는 프레임워크입니다.
+
+### 주요 기능
+- 인증(Authentication): 사용자 신원 확인
+- 인가(Authorization): 권한 확인
+- CSRF 보호
+- 세션 관리
+
+## 5. REST API
+RESTful 웹 서비스를 구축하기 위한 아키텍처 스타일입니다.
+
+### HTTP 메서드
+- GET: 리소스 조회
+- POST: 리소스 생성
+- PUT: 리소스 수정
+- DELETE: 리소스 삭제
+
+## 핵심 정리
+Spring Boot는 개발자가 비즈니스 로직에 집중할 수 있도록 많은 부분을 자동화하고 간소화한 프레임워크입니다. 의존성 주입, JPA, Security 등의 핵심 개념을 이해하고 활용하면 효율적인 웹 애플리케이션을 개발할 수 있습니다.
