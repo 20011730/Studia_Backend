@@ -60,7 +60,7 @@ public class QuizService {
                                     .title(material.getTitle())
                                     .originalFileName(material.getOriginalFileName())
                                     .build())
-                            .questions(entry.getValue())
+                            .questionCount(entry.getValue().size())
                             .attempts(quizAttemptRepository.countByUserIdAndQuiz_StudyMaterial_Id(
                                     user.getId(), material.getId()))
                             .build();

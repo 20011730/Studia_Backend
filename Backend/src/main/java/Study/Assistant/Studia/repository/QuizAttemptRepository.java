@@ -77,4 +77,42 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
     
     // 사용자의 모든 퀴즈 시도를 최신순으로 조회
     List<QuizAttempt> findByUserIdOrderByAttemptedAtDesc(Long userId);
+    
+    // 리더보드: 상위 사용자들의 점수 조회
+    @Query("SELECT qa.user.id, SUM(qa.score), COUNT(qa), AVG(qa.score) " +
+           "FROM QuizAttempt qa " +
+           "GROUP BY qa.user.id " +
+           "ORDER BY SUM(qa.score) DESC " +
+           "LIMIT :limit")
+    List<Object[]> findTopUsersByScore(@Param("limit") int limit);
+    
+    // 코스별 리더보드
+    @Query("SELECT qa.user.id, SUM(qa.score), COUNT(qa), AVG(qa.score) " +
+           "FROM QuizAttempt qa " +
+           "JOIN qa.quiz q " +
+           "JOIN q.studyMaterial sm " +
+           "WHERE sm.course.id = :courseId " +
+           "GROUP BY qa.user.id " +
+           "ORDER BY SUM(qa.score) DESC " +
+           "LIMIT :limit")
+    List<Object[]> findTopUsersByCourse(@Param("courseId") Long courseId, @Param("limit") int limit);
+    
+    // 사용자의 통계 정보
+    @Query("SELECT SUM(qa.score), COUNT(qa), AVG(qa.score) " +
+           "FROM QuizAttempt qa " +
+           "WHERE qa.user.id = :userId")
+    Object[] findUserStats(@Param("userId") Long userId);
+    
+    // 사용자의 순위 계산
+    @Query("SELECT COUNT(DISTINCT qa.user.id) " +
+           "FROM QuizAttempt qa " +
+           "GROUP BY qa.user.id " +
+           "HAVING SUM(qa.score) > :userScore")
+    Integer findUserRank(@Param("userScore") int userScore);
+    
+    // 사용자의 마지막 활동 시간
+    @Query("SELECT MAX(qa.attemptedAt) " +
+           "FROM QuizAttempt qa " +
+           "WHERE qa.user.id = :userId")
+    LocalDateTime findLastActivityByUserId(@Param("userId") Long userId);
 }

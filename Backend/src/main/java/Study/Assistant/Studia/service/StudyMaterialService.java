@@ -4,10 +4,11 @@ import Study.Assistant.Studia.domain.entity.Quiz;
 import Study.Assistant.Studia.domain.entity.StudyMaterial;
 import Study.Assistant.Studia.domain.entity.User;
 import Study.Assistant.Studia.dto.response.MaterialSummaryResponse;
-import Study.Assistant.Studia.dto.response.QuizResponse;
+import Study.Assistant.Studia.dto.response.QuizItemResponse;
 import Study.Assistant.Studia.repository.StudyMaterialRepository;
 import Study.Assistant.Studia.repository.QuizRepository;
 import Study.Assistant.Studia.repository.UserRepository;
+import Study.Assistant.Studia.util.InputSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,9 +33,25 @@ public class StudyMaterialService {
     private final FileProcessingService fileProcessingService;
     private final AIService aiService;
     private final UserRepository userRepository;
+    private final InputSanitizer inputSanitizer;
     
     public MaterialSummaryResponse processMaterial(MultipartFile file, Long courseId, String title) {
         try {
+            // 입력 검증
+            if (file.isEmpty()) {
+                throw new IllegalArgumentException("File is empty");
+            }
+            
+            String sanitizedTitle = inputSanitizer.sanitizeHtml(title);
+            if (sanitizedTitle == null || sanitizedTitle.trim().isEmpty()) {
+                sanitizedTitle = inputSanitizer.sanitizeFileName(file.getOriginalFilename());
+            }
+            
+            // 파일 크기 검증 (100MB)
+            if (file.getSize() > 100 * 1024 * 1024) {
+                throw new IllegalArgumentException("File size exceeds 100MB limit");
+            }
+            
             // 1. 파일에서 텍스트 추출
             String content = fileProcessingService.extractTextFromFile(file);
             
@@ -47,9 +64,9 @@ public class StudyMaterialService {
             
             // 3. StudyMaterial 엔티티 생성 및 저장
             StudyMaterial material = StudyMaterial.builder()
-                    .title(title)
-                    .originalFileName(file.getOriginalFilename())
-                    .storedFileName(java.util.UUID.randomUUID().toString() + "_" + file.getOriginalFilename())
+                    .title(sanitizedTitle)
+                    .originalFileName(inputSanitizer.sanitizeFileName(file.getOriginalFilename()))
+                    .storedFileName(java.util.UUID.randomUUID().toString() + "_" + inputSanitizer.sanitizeFileName(file.getOriginalFilename()))
                     .fileType(file.getContentType())
                     .fileSize(file.getSize())
                     .rawContent(content)
@@ -106,7 +123,7 @@ public class StudyMaterialService {
         return convertToResponse(material);
     }
     
-    public List<QuizResponse> generateQuizzes(Long materialId, String difficulty, int count) {
+    public List<QuizItemResponse> generateQuizzes(Long materialId, String difficulty, int count) {
         // 퀴즈 개수 검증 (5-50개)
         if (count < 5 || count > 50) {
             throw new IllegalArgumentException("퀴즈 개수는 5개에서 50개 사이여야 합니다.");
@@ -178,8 +195,8 @@ public class StudyMaterialService {
                 .build();
     }
     
-    private QuizResponse convertToQuizResponse(Quiz quiz) {
-        return QuizResponse.builder()
+    private QuizItemResponse convertToQuizResponse(Quiz quiz) {
+        return QuizItemResponse.builder()
                 .id(quiz.getId())
                 .question(quiz.getQuestion())
                 .questionType(quiz.getQuestionType().toString())

@@ -2,7 +2,7 @@ package Study.Assistant.Studia.controller;
 
 import Study.Assistant.Studia.dto.request.MaterialUploadRequest;
 import Study.Assistant.Studia.dto.response.MaterialSummaryResponse;
-import Study.Assistant.Studia.dto.response.QuizResponse;
+import Study.Assistant.Studia.dto.response.QuizItemResponse;
 import Study.Assistant.Studia.service.StudyMaterialService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -56,12 +56,12 @@ public class StudyMaterialController {
      * 퀴즈 생성
      */
     @PostMapping("/{id}/quizzes")
-    public ResponseEntity<List<QuizResponse>> generateQuizzes(
+    public ResponseEntity<List<QuizItemResponse>> generateQuizzes(
             @PathVariable Long id,
             @RequestParam(value = "difficulty", defaultValue = "MEDIUM") String difficulty,
             @RequestParam(value = "count", defaultValue = "5") int count) {
         
-        List<QuizResponse> quizzes = studyMaterialService.generateQuizzes(id, difficulty, count);
+        List<QuizItemResponse> quizzes = studyMaterialService.generateQuizzes(id, difficulty, count);
         return ResponseEntity.ok(quizzes);
     }
     
