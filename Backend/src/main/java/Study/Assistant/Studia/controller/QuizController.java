@@ -1,19 +1,21 @@
 package Study.Assistant.Studia.controller;
 
 import Study.Assistant.Studia.dto.request.QuizAttemptRequest;
-import Study.Assistant.Studia.dto.response.QuizAttemptResponse;
-import Study.Assistant.Studia.dto.response.QuizReviewResponse;
-import Study.Assistant.Studia.dto.response.WrongAnswerNoteResponse;
+import Study.Assistant.Studia.dto.response.*;
 import Study.Assistant.Studia.service.QuizService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/quizzes")
 @RequiredArgsConstructor
+@Slf4j
 public class QuizController {
     
     private final QuizService quizService;
@@ -22,8 +24,8 @@ public class QuizController {
      * 퀴즈 목록 조회
      */
     @GetMapping
-    public ResponseEntity<List<Study.Assistant.Studia.dto.response.QuizResponse>> getQuizzes() {
-        List<Study.Assistant.Studia.dto.response.QuizResponse> quizzes = quizService.getUserQuizzes();
+    public ResponseEntity<List<QuizResponse>> getQuizzes() {
+        List<QuizResponse> quizzes = quizService.getUserQuizzes();
         return ResponseEntity.ok(quizzes);
     }
     
@@ -31,9 +33,23 @@ public class QuizController {
      * 특정 퀴즈 상세 조회
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Study.Assistant.Studia.dto.response.QuizDetailResponse> getQuiz(@PathVariable Long id) {
-        Study.Assistant.Studia.dto.response.QuizDetailResponse quiz = quizService.getQuizDetail(id);
+    public ResponseEntity<QuizDetailResponse> getQuiz(@PathVariable Long id) {
+        QuizDetailResponse quiz = quizService.getQuizDetail(id);
         return ResponseEntity.ok(quiz);
+    }
+    
+    /**
+     * 퀴즈 삭제
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteQuiz(@PathVariable Long id, Authentication authentication) {
+        try {
+            quizService.deleteQuiz(id);
+            return ResponseEntity.ok().body(Map.of("message", "Quiz deleted successfully"));
+        } catch (Exception e) {
+            log.error("Failed to delete quiz", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to delete quiz"));
+        }
     }
     
     /**

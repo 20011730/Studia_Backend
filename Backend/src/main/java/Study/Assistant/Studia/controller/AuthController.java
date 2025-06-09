@@ -6,13 +6,18 @@ import Study.Assistant.Studia.dto.auth.SignupRequest;
 import Study.Assistant.Studia.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
     
     private final AuthService authService;
@@ -39,5 +44,17 @@ public class AuthController {
     public ResponseEntity<Void> logout(@RequestHeader("Authorization") String token) {
         authService.logout(token);
         return ResponseEntity.ok().build();
+    }
+    
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteAccount(Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            authService.deleteUser(email);
+            return ResponseEntity.ok().body(Map.of("message", "Account deleted successfully"));
+        } catch (Exception e) {
+            log.error("Account deletion failed", e);
+            throw new RuntimeException("Failed to delete account");
+        }
     }
 }

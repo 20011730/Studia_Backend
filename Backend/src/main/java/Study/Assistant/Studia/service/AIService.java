@@ -36,18 +36,81 @@ public class AIService {
     
     @jakarta.annotation.PostConstruct
     public void init() {
-        log.info("AI Service initialized with model: {}", preferredModel);
-        log.info("OpenAI API Key configured: {}", !openAiApiKey.isEmpty());
-        if (!openAiApiKey.isEmpty()) {
+        log.info("=== AI Service Configuration ===");
+        log.info("Preferred AI Model: {}", preferredModel);
+        log.info("OpenAI API Key configured: {}", !openAiApiKey.isEmpty() && !openAiApiKey.equals("test-key"));
+        log.info("Claude API Key configured: {}", !claudeApiKey.isEmpty() && !claudeApiKey.equals("test-key"));
+        
+        if (!openAiApiKey.isEmpty() && !openAiApiKey.equals("test-key")) {
             log.info("OpenAI API Key length: {}", openAiApiKey.length());
+            log.info("OpenAI API Key starts with: {}", openAiApiKey.substring(0, Math.min(10, openAiApiKey.length())) + "...");
         }
+        
+        if (!claudeApiKey.isEmpty() && !claudeApiKey.equals("test-key")) {
+            log.info("Claude API Key length: {}", claudeApiKey.length());
+        }
+        
+        log.info("OpenAI API URL: {}", openAiUrl);
+        log.info("Claude API URL: {}", claudeUrl);
+        log.info("=================================");
     }
     
     public String generateSummary(String content) {
         String prompt = """
-            다음 내용을 한국어로 체계적으로 요약해주세요.
-            주요 아이디어, 핵심 개념, 중요한 세부사항에 초점을 맞춰주세요.
-            요약은 체계적이고 이해하기 쉬워야 합니다.
+            당신은 대학생들의 학습을 돕는 전문 AI 튜터입니다.
+            다음 학습 자료를 대학생이 이해하기 쉽도록 체계적으로 요약해주세요.
+            
+            요약 가이드라인:
+            1. 핵심 개념과 주요 아이디어를 명확히 구분하여 설명
+            2. 중요한 용어나 정의는 **볼드체**로 강조
+            3. 복잡한 개념은 구체적이고 실용적인 예시를 들어 설명
+            4. 논리적 흐름을 따라 체계적으로 구성
+            5. 학습에 도움이 되는 추가 통찰력과 연관 개념 제공
+            6. 시험에 자주 출제되는 부분은 특별히 강조
+            7. 개념 간의 관계와 차이점을 명확히 설명
+            
+            형식:
+            ## 📚 핵심 개념 요약
+            
+            ### 🎯 학습 목표
+            이 자료를 통해 이해해야 할 핵심 목표 3-4개를 명확히 제시
+            
+            ### 1. 핵심 개념 정리
+            **[개념명]**: 정의와 중요성
+            - 상세 설명
+            - 실제 예시
+            - 관련 개념과의 연결
+            
+            ### 2. 세부 내용 분석
+            #### 2.1 [주제1]
+            - 핵심 내용
+            - 구체적 설명
+            - 실습/응용 방법
+            
+            #### 2.2 [주제2]
+            - 핵심 내용
+            - 구체적 설명
+            - 주의사항
+            
+            ### 3. 핵심 포인트 정리
+            ✅ **중요 포인트 1**: 설명
+            ✅ **중요 포인트 2**: 설명
+            ✅ **중요 포인트 3**: 설명
+            
+            ### 4. 🔍 자주 출제되는 부분
+            - **개념 A vs 개념 B 비교**: 차이점과 공통점
+            - **계산/적용 문제**: 어떤 유형이 나오는지
+            - **서술형 예상 문제**: 어떤 설명을 요구하는지
+            
+            ### 5. 💡 학습 전략
+            1. **이해 단계**: 어떻게 접근할지
+            2. **암기 팁**: 효율적인 암기 방법
+            3. **복습 방법**: 장기 기억을 위한 전략
+            
+            ### 6. 🔗 연관 학습 자료
+            - 이전에 배운 내용과의 연결
+            - 다음에 배울 내용과의 관계
+            - 추가 학습이 필요한 부분
             
             내용:
             %s
@@ -58,9 +121,27 @@ public class AIService {
     
     public List<String> extractKeyPoints(String content) {
         String prompt = """
-            다음 내용에서 핵심 포인트를 추출해주세요.
-            각 핵심 포인트를 별도의 항목으로 나열해주세요.
-            가장 중요한 개념과 사실에 초점을 맞춰주세요.
+            당신은 학습 내용의 핵심을 파악하는 전문가입니다.
+            다음 내용에서 시험에 나올 가능성이 높은 핵심 포인트를 추출해주세요.
+            
+            추출 기준:
+            1. 정의나 개념 설명 (시험의 30-40%)
+            2. 중요한 공식이나 원리 (시험의 20-30%)
+            3. 인과관계나 프로세스 (시험의 20%)
+            4. 비교/대조되는 내용 (시험의 15%)
+            5. 실제 적용 예시와 문제 해결 (시험의 15%)
+            
+            각 포인트는 다음 형식으로 작성:
+            - 🔑 **[핵심 개념]**: 간결하고 명확한 설명 (예: **스택(Stack)**: LIFO 구조의 자료구조로, push/pop 연산을 통해 데이터를 관리)
+            - 📌 **[중요도]**: 상(★★★)/중(★★)/하(★) - 시험 출제 빈도 기준
+            - 💭 **[암기 팁]**: 연상법이나 기억하기 쉬운 방법 (예: "Last In First Out = LIFO = 늦게 온 사람이 먼저 나간다")
+            - 🎯 **[출제 유형]**: 어떤 형식으로 시험에 나올지 예측 (예: 개념 설명, 코드 작성, 응용 문제)
+            
+            중요: 
+            - 각 포인트는 독립적으로 이해 가능해야 함
+            - 시험에 직접 출제될 수 있는 형태로 작성
+            - 15-20개의 핵심 포인트 추출
+            - 우선순위에 따라 정렬 (가장 중요한 것부터)
             
             내용:
             %s
@@ -72,20 +153,62 @@ public class AIService {
     
     public List<Map<String, Object>> generateQuizzes(String content, int count, String difficulty) {
         String prompt = """
-            다음 내용을 바탕으로 %d개의 퀴즈 문제를 만들어주세요.
-            난이도: %s
-            각 문제에 대해 다음을 제공해주세요:
-            1. 문제 텍스트
-            2. 객관식 선택지 (해당하는 경우)
-            3. 정답
-            4. 간단한 설명
-            5. 난이도 (EASY, MEDIUM, HARD 중 하나)
+            당신은 대학 교수로서 고품질의 평가 문제를 만드는 전문가입니다.
+            다음 학습 내용을 바탕으로 %d개의 객관식 문제를 만들어주세요.
             
-            JSON 배열 형식으로 응답해주세요.
+            난이도: %s
+            - EASY (기초): 단순 암기, 정의 확인, 기본 개념 이해 (대학 1-2학년 수준)
+            - MEDIUM (중급): 개념 적용, 문제 해결, 분석 능력 (대학 2-3학년 수준)
+            - HARD (심화): 종합적 사고, 창의적 응용, 비판적 분석 (대학 3-4학년 수준)
+            
+            문제 구성 가이드라인:
+            1. **개념 이해 문제 (30%%)**: 핵심 개념의 정확한 이해도 평가
+               - 정의를 묻는 문제
+               - 개념의 특징을 묻는 문제
+               - 용어의 의미를 묻는 문제
+            
+            2. **적용 문제 (30%%)**: 학습한 내용을 새로운 상황에 적용
+               - 예시를 들어 개념을 적용하는 문제
+               - 실제 상황에서의 활용 문제
+               - 계산이나 분석이 필요한 문제
+            
+            3. **분석/비교 문제 (25%%)**: 여러 개념 간의 관계 이해
+               - A와 B의 차이점/공통점
+               - 장단점 비교
+               - 관계 분석
+            
+            4. **종합/평가 문제 (15%%)**: 고차원적 사고력 평가
+               - 여러 개념을 종합한 문제
+               - 비판적 사고가 필요한 문제
+               - 새로운 상황에 대한 예측/평가
+            
+            각 문제는 다음 JSON 형식으로 작성:
+            [
+                {
+                    "question": "명확하고 구체적인 질문 (맥락 포함, 애매하지 않게)",
+                    "options": ["선택지1 (정답)", "선택지2 (그럴듯한 오답)", "선택지3 (흔한 오개념)", "선택지4 (관련 있지만 틀린 답)"],
+                    "correctAnswer": "정답 선택지 전체 텍스트",
+                    "explanation": "왜 이것이 정답인지 상세 설명. 각 오답이 왜 틀렸는지도 설명. 추가 학습 포인트 제시",
+                    "difficulty": "%s",
+                    "category": "개념이해/적용/분석/종합",
+                    "hint": "문제를 풀 때 도움이 되는 힌트 (너무 직접적이지 않게)",
+                    "learningObjective": "이 문제로 평가하려는 학습 목표",
+                    "commonMistakes": "학생들이 자주 하는 실수"
+                }
+            ]
+            
+            문제 작성 시 주의사항:
+            1. 선택지는 모두 비슷한 길이와 구조로 작성
+            2. 부정문("~아닌 것은?")은 최소화
+            3. "모두 맞다", "모두 틀리다" 같은 선택지 지양
+            4. 함정이나 말장난이 아닌 실제 이해도를 평가
+            5. 선택지 순서는 논리적으로 배치 (숫자는 오름차순, 시간은 순서대로 등)
+            6. 각 문제는 독립적으로 풀 수 있어야 함
+            7. 실제 대학 시험에 출제될 만한 수준과 형식 유지
             
             내용:
             %s
-            """.formatted(count, difficulty, content);
+            """.formatted(count, difficulty, difficulty, content);
         
         String response = callAI(prompt, "quiz-generation");
         return parseQuizResponse(response);
@@ -93,17 +216,127 @@ public class AIService {
     
     public String generateStudyPlan(List<Map<String, Object>> courses, List<Map<String, Object>> exams) {
         String prompt = """
-            다음 수업 일정과 시험 일정을 고려하여 효율적인 학습 계획을 세워주세요:
+            당신은 20년 경력의 학습 컨설턴트입니다.
+            학생의 수업 일정과 시험 일정을 분석하여 과학적이고 실현 가능한 맞춤형 학습 계획을 수립해주세요.
             
             수업 일정: %s
-            
             시험 일정: %s
             
-            다음 사항을 포함해주세요:
-            1. 일일 학습 권장 시간
-            2. 과목별 우선순위
-            3. 복습 주기
-            4. 시험 대비 전략
+            다음 형식으로 구체적이고 실행 가능한 학습 계획을 작성해주세요:
+            
+            ## 📅 맞춤형 학습 계획
+            
+            ### 🎯 학습 목표 설정
+            #### 단기 목표 (1-2주)
+            - 구체적이고 측정 가능한 목표 3개
+            - 각 목표별 달성 지표
+            
+            #### 중기 목표 (1개월)
+            - 한 달 후 도달해야 할 학습 수준
+            - 평가 방법
+            
+            #### 장기 목표 (학기 전체)
+            - 학기말 목표 성적
+            - 전체적인 학습 성과 목표
+            
+            ### ⏰ 최적화된 일일 학습 스케줄
+            #### 평일 스케줄
+            - **06:00-08:00**: [추천 활동] - 이 시간대가 좋은 이유
+            - **08:00-12:00**: [수업 시간 고려한 학습 계획]
+            - **14:00-16:00**: [골든 타임 활용법] - 집중력이 높은 시간
+            - **16:00-18:00**: [복습 및 과제]
+            - **20:00-22:00**: [심화 학습] - 어려운 과목 집중
+            - **22:00-23:00**: [가벼운 복습 및 내일 준비]
+            
+            #### 주말 스케줄
+            - 토요일: 주간 복습 및 부족한 부분 보충
+            - 일요일: 다음 주 예습 및 휴식
+            
+            ### 📊 과목별 학습 시간 배분
+            #### 우선순위 설정 (시험 일정 기반)
+            1. **[과목명]**: 주당 X시간 
+               - 추천 이유: 시험이 Y일 남음, 난이도가 높음
+               - 학습 방법: 개념 이해 중심, 문제 풀이 병행
+            
+            2. **[과목명]**: 주당 X시간
+               - 추천 이유: 기초 과목으로 다른 과목의 기반
+               - 학습 방법: 꾸준한 복습, 응용력 기르기
+            
+            ### 🔄 과학적 복습 전략
+            #### 에빙하우스 망각곡선 기반 복습 주기
+            - **24시간 이내**: 수업 내용 1차 복습 (10분)
+            - **3일 후**: 핵심 내용 정리 (20분)
+            - **1주일 후**: 전체 내용 복습 + 문제 풀이 (30분)
+            - **2주 후**: 심화 문제 및 응용 (40분)
+            - **1개월 후**: 종합 복습 및 약점 보완 (1시간)
+            
+            #### 과목별 복습 방법
+            - **암기 과목**: 플래시카드, 반복 학습, 연상법
+            - **이해 과목**: 개념도 그리기, 설명하기, 문제 만들기
+            - **실습 과목**: 코드 직접 작성, 프로젝트 진행
+            
+            ### 📝 시험 대비 전략
+            #### D-30 (한 달 전)
+            - 전체 범위 파악 및 학습 계획 수립
+            - 기출문제 수집 및 출제 경향 분석
+            - 취약 단원 파악
+            
+            #### D-14 (2주 전)
+            - 집중 학습 기간 시작
+            - 단원별 핵심 정리 노트 작성
+            - 예상 문제 만들기
+            
+            #### D-7 (1주 전)
+            - 실전 모의고사 풀이
+            - 오답 노트 정리
+            - 취약 부분 집중 보완
+            
+            #### D-3 (3일 전)
+            - 전체 내용 빠른 복습
+            - 핵심 공식/개념 최종 정리
+            - 시험 전략 수립 (시간 배분 등)
+            
+            #### D-1 (전날)
+            - 가벼운 복습만
+            - 충분한 휴식
+            - 시험 준비물 확인
+            
+            ### 💡 학습 효율 극대화 팁
+            #### 집중력 향상 방법
+            1. **포모도로 기법**: 25분 집중 + 5분 휴식
+            2. **환경 조성**: 조용한 곳, 적절한 조명, 정리된 책상
+            3. **디지털 디톡스**: 학습 중 스마트폰 차단
+            
+            #### 기억력 향상 방법
+            1. **능동적 회상**: 책을 덮고 내용 떠올리기
+            2. **분산 학습**: 한 번에 몰아서 하지 않기
+            3. **다감각 학습**: 보고, 듣고, 쓰고, 말하기
+            
+            #### 동기부여 유지
+            1. **작은 목표 달성**: 매일 성취감 느끼기
+            2. **보상 시스템**: 목표 달성 시 자신에게 선물
+            3. **학습 일지**: 발전 과정 기록하기
+            
+            ### ⚠️ 주의사항 및 건강 관리
+            #### 번아웃 예방
+            - 주 1-2회는 완전한 휴식
+            - 취미 활동 시간 확보
+            - 규칙적인 운동 (주 3회, 30분)
+            
+            #### 건강 관리
+            - 수면: 최소 7시간 확보
+            - 식사: 규칙적인 식사, 뇌에 좋은 음식
+            - 스트레칭: 1시간마다 5분 스트레칭
+            
+            #### 멘탈 관리
+            - 명상이나 심호흡
+            - 긍정적인 자기 대화
+            - 필요시 상담 센터 이용
+            
+            ### 📈 진도 체크 및 조정
+            - 매주 일요일: 주간 학습 성과 평가
+            - 2주마다: 학습 계획 조정
+            - 매월: 전체적인 진도 점검 및 목표 재설정
             """.formatted(courses.toString(), exams.toString());
         
         return callAI(prompt, "study-plan");
@@ -126,6 +359,8 @@ public class AIService {
     }
     
     private String callOpenAI(String prompt) {
+        log.debug("Calling OpenAI API with prompt length: {}", prompt.length());
+        
         WebClient webClient = webClientBuilder
                 .baseUrl(openAiUrl)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + openAiApiKey)
@@ -133,21 +368,34 @@ public class AIService {
                 .build();
         
         Map<String, Object> requestBody = Map.of(
-                "model", "gpt-3.5-turbo",
+                "model", "gpt-4o-mini",
                 "messages", List.of(
-                        Map.of("role", "system", "content", "You are a helpful AI assistant for a study application. Always respond in Korean."),
+                        Map.of("role", "system", "content", 
+                                "You are an expert AI tutor specializing in university-level education. " +
+                                "You provide detailed, accurate, and helpful responses in Korean. " +
+                                "Your responses are well-structured, educational, and tailored for university students."),
                         Map.of("role", "user", "content", prompt)
                 ),
                 "temperature", 0.7,
-                "max_tokens", 1000
+                "max_tokens", 2000,
+                "top_p", 0.9,
+                "frequency_penalty", 0.2,
+                "presence_penalty", 0.1
         );
         
-        return webClient.post()
-                .bodyValue(requestBody)
-                .retrieve()
-                .bodyToMono(String.class)
-                .map(this::extractOpenAIResponse)
-                .block();
+        try {
+            String response = webClient.post()
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+            
+            log.debug("OpenAI API response received");
+            return extractOpenAIResponse(response);
+        } catch (Exception e) {
+            log.error("Error calling OpenAI API: ", e);
+            throw new RuntimeException("Failed to call OpenAI API", e);
+        }
     }
     
     private String callClaude(String prompt) {
@@ -218,10 +466,48 @@ public class AIService {
     
     private List<Map<String, Object>> parseQuizResponse(String response) {
         try {
-            // AI가 JSON 형식으로 응답하도록 요청했으므로 파싱 시도
-            return objectMapper.readValue(response, List.class);
+            // JSON 배열 부분만 추출
+            String jsonContent = response;
+            int startIndex = response.indexOf("[");
+            int endIndex = response.lastIndexOf("]");
+            
+            if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+                jsonContent = response.substring(startIndex, endIndex + 1);
+            }
+            
+            // JSON 파싱
+            List<Map<String, Object>> quizzes = objectMapper.readValue(jsonContent, List.class);
+            
+            // 각 퀴즈의 데이터 검증 및 정리
+            for (Map<String, Object> quiz : quizzes) {
+                // 필수 필드 확인
+                if (!quiz.containsKey("question") || !quiz.containsKey("options") || 
+                    !quiz.containsKey("correctAnswer") || !quiz.containsKey("explanation")) {
+                    log.warn("Quiz missing required fields: {}", quiz);
+                    continue;
+                }
+                
+                // difficulty가 없으면 기본값 설정
+                if (!quiz.containsKey("difficulty")) {
+                    quiz.put("difficulty", "MEDIUM");
+                }
+                
+                // category가 없으면 기본값 설정
+                if (!quiz.containsKey("category")) {
+                    quiz.put("category", "개념이해");
+                }
+                
+                // hint가 없으면 기본값 설정
+                if (!quiz.containsKey("hint")) {
+                    quiz.put("hint", "문제를 차근차근 읽어보고 핵심 개념을 파악해보세요.");
+                }
+            }
+            
+            log.debug("Successfully parsed {} quizzes from AI response", quizzes.size());
+            return quizzes;
+            
         } catch (Exception e) {
-            log.warn("Failed to parse quiz response as JSON, using fallback parser");
+            log.error("Failed to parse quiz response as JSON, response: {}", response, e);
             return parsePlainTextQuiz(response);
         }
     }

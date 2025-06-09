@@ -12,4 +12,5 @@ public class MaterialUploadRequest {
     private MultipartFile file;
     private String title;
     private Long courseId;
+    private String className;
 }

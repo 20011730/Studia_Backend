@@ -45,6 +45,9 @@ public class Quiz {
     
     private String hint; // 힌트 추가
     
+    @Column
+    private String className; // 수업명 추가
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "study_material_id")
     private StudyMaterial studyMaterial;

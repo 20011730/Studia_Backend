@@ -53,6 +53,9 @@ public class StudyMaterial {
     @JoinColumn(name = "course_id")
     private Course course;
     
+    @Column
+    private String className;
+    
     @OneToMany(mappedBy = "studyMaterial", cascade = CascadeType.ALL)
     private List<Quiz> quizzes = new ArrayList<>();
     

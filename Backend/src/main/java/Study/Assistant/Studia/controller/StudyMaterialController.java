@@ -1,6 +1,7 @@
 package Study.Assistant.Studia.controller;
 
 import Study.Assistant.Studia.dto.request.MaterialUploadRequest;
+import Study.Assistant.Studia.dto.request.MaterialUpdateRequest;
 import Study.Assistant.Studia.dto.response.MaterialSummaryResponse;
 import Study.Assistant.Studia.dto.response.QuizItemResponse;
 import Study.Assistant.Studia.service.StudyMaterialService;
@@ -26,9 +27,10 @@ public class StudyMaterialController {
     public ResponseEntity<MaterialSummaryResponse> uploadMaterial(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "courseId", required = false) Long courseId,
-            @RequestParam("title") String title) {
+            @RequestParam("title") String title,
+            @RequestParam(value = "className", required = false) String className) {
         
-        MaterialSummaryResponse response = studyMaterialService.processMaterial(file, courseId, title);
+        MaterialSummaryResponse response = studyMaterialService.processMaterial(file, courseId, title, className);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
@@ -72,5 +74,26 @@ public class StudyMaterialController {
     public ResponseEntity<Void> deleteMaterial(@PathVariable Long id) {
         studyMaterialService.deleteMaterial(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    /**
+     * 강의 자료 업데이트
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<MaterialSummaryResponse> updateMaterial(
+            @PathVariable Long id,
+            @RequestBody MaterialUpdateRequest request) {
+        
+        MaterialSummaryResponse response = studyMaterialService.updateMaterial(id, request.getTitle(), request.getClassName());
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 요약 재생성
+     */
+    @PostMapping("/{id}/regenerate-summary")
+    public ResponseEntity<MaterialSummaryResponse> regenerateSummary(@PathVariable Long id) {
+        MaterialSummaryResponse response = studyMaterialService.regenerateSummary(id);
+        return ResponseEntity.ok(response);
     }
 }

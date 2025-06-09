@@ -22,6 +22,7 @@ public class MaterialSummaryResponse {
     private String status;
     private Long courseId;
     private String courseName;
+    private String className;
     private LocalDateTime createdAt;
     private LocalDateTime processedAt;
 }

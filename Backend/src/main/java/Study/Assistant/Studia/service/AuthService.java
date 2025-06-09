@@ -12,17 +12,16 @@ import Study.Assistant.Studia.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-// import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -33,7 +32,6 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final AuthenticationManager authenticationManager;
-    // private final RedisTemplate<String, String> redisTemplate;
     
     @Value("${jwt.expiration}")
     private int jwtExpirationInMs;
@@ -122,6 +120,17 @@ public class AuthService {
         
         log.info("User {} logged out", username);
         SecurityContextHolder.clearContext();
+    }
+    
+    @Transactional
+    public void deleteUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        
+        // Delete all related data first
+        // This should be handled by cascade settings, but explicitly deleting for safety
+        userRepository.delete(user);
+        log.info("User account deleted: {}", email);
     }
     
     private JwtAuthenticationResponse createTokenResponse(Authentication authentication, User user) {

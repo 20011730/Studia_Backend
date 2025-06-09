@@ -35,7 +35,7 @@ public class StudyMaterialService {
     private final UserRepository userRepository;
     private final InputSanitizer inputSanitizer;
     
-    public MaterialSummaryResponse processMaterial(MultipartFile file, Long courseId, String title) {
+    public MaterialSummaryResponse processMaterial(MultipartFile file, Long courseId, String title, String className) {
         try {
             // 입력 검증
             if (file.isEmpty()) {
@@ -46,6 +46,8 @@ public class StudyMaterialService {
             if (sanitizedTitle == null || sanitizedTitle.trim().isEmpty()) {
                 sanitizedTitle = inputSanitizer.sanitizeFileName(file.getOriginalFilename());
             }
+            
+            String sanitizedClassName = className != null ? inputSanitizer.sanitizeHtml(className) : null;
             
             // 파일 크기 검증 (100MB)
             if (file.getSize() > 100 * 1024 * 1024) {
@@ -70,6 +72,7 @@ public class StudyMaterialService {
                     .fileType(file.getContentType())
                     .fileSize(file.getSize())
                     .rawContent(content)
+                    .className(sanitizedClassName)
                     .status(StudyMaterial.ProcessingStatus.PROCESSING)
                     .user(user)
                     .build();
@@ -148,6 +151,7 @@ public class StudyMaterialService {
                     .difficulty(Quiz.Difficulty.valueOf(difficulty.toUpperCase()))
                     .correctAnswer((String) data.get("correctAnswer"))
                     .explanation((String) data.get("explanation"))
+                    .className(material.getClassName()) // className 추가
                     .build();
             
             // 선택지 설정
@@ -174,8 +178,74 @@ public class StudyMaterialService {
                 .collect(Collectors.toList());
     }
     
+    public MaterialSummaryResponse updateMaterial(Long id, String title, String className) {
+        StudyMaterial material = studyMaterialRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        
+        // 현재 로그인한 사용자 확인
+        org.springframework.security.core.Authentication auth = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // 권한 확인
+        if (!material.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized to update this material");
+        }
+        
+        // 업데이트
+        if (title != null && !title.trim().isEmpty()) {
+            material.setTitle(inputSanitizer.sanitizeHtml(title));
+        }
+        
+        material.setClassName(className != null ? inputSanitizer.sanitizeHtml(className) : null);
+        
+        material = studyMaterialRepository.save(material);
+        
+        // 관련된 퀴즈들의 className도 업데이트
+        List<Quiz> quizzes = quizRepository.findByStudyMaterialId(material.getId());
+        for (Quiz quiz : quizzes) {
+            quiz.setClassName(material.getClassName());
+        }
+        quizRepository.saveAll(quizzes);
+        
+        return convertToResponse(material);
+    }
+    
     public void deleteMaterial(Long id) {
         studyMaterialRepository.deleteById(id);
+    }
+    
+    public MaterialSummaryResponse regenerateSummary(Long id) {
+        StudyMaterial material = studyMaterialRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Material not found"));
+        
+        // 재생성 전 상태를 PROCESSING으로 변경
+        material.setStatus(StudyMaterial.ProcessingStatus.PROCESSING);
+        studyMaterialRepository.save(material);
+        
+        try {
+            // AI를 사용하여 요약 재생성
+            String summary = aiService.generateSummary(material.getRawContent());
+            material.setSummary(summary);
+            
+            // 핵심 포인트 재추출
+            List<String> keyPoints = aiService.extractKeyPoints(material.getRawContent());
+            material.setKeyPoints(String.join("\n", keyPoints));
+            
+            material.setStatus(StudyMaterial.ProcessingStatus.COMPLETED);
+            material.setProcessedAt(LocalDateTime.now());
+            
+            material = studyMaterialRepository.save(material);
+            
+            return convertToResponse(material);
+        } catch (Exception e) {
+            log.error("Error regenerating summary for material {}: {}", id, e.getMessage());
+            material.setStatus(StudyMaterial.ProcessingStatus.FAILED);
+            studyMaterialRepository.save(material);
+            throw new RuntimeException("Failed to regenerate summary", e);
+        }
     }
     
     private MaterialSummaryResponse convertToResponse(StudyMaterial material) {
@@ -190,6 +260,7 @@ public class StudyMaterialService {
                 .status(material.getStatus().toString())
                 .courseId(material.getCourse() != null ? material.getCourse().getId() : null)
                 .courseName(material.getCourse() != null ? material.getCourse().getCourseName() : null)
+                .className(material.getClassName())
                 .createdAt(material.getCreatedAt())
                 .processedAt(material.getProcessedAt())
                 .build();

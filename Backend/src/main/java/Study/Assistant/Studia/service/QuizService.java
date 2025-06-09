@@ -31,7 +31,7 @@ public class QuizService {
     /**
      * 사용자의 퀴즈 목록 조회
      */
-    public List<Study.Assistant.Studia.dto.response.QuizResponse> getUserQuizzes() {
+    public List<QuizResponse> getUserQuizzes() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -52,10 +52,10 @@ public class QuizService {
                     
                     if (material == null) return null;
                     
-                    return Study.Assistant.Studia.dto.response.QuizResponse.builder()
+                    return QuizResponse.builder()
                             .id(entry.getKey()) // Material ID as quiz group ID
                             .title(material.getTitle() + " Quiz")
-                            .material(Study.Assistant.Studia.dto.response.MaterialSummaryResponse.builder()
+                            .material(MaterialSummaryResponse.builder()
                                     .id(material.getId())
                                     .title(material.getTitle())
                                     .originalFileName(material.getOriginalFileName())
@@ -72,7 +72,7 @@ public class QuizService {
     /**
      * 특정 퀴즈 상세 조회
      */
-    public Study.Assistant.Studia.dto.response.QuizDetailResponse getQuizDetail(Long materialId) {
+    public QuizDetailResponse getQuizDetail(Long materialId) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -85,8 +85,8 @@ public class QuizService {
         
         StudyMaterial material = quizzes.get(0).getStudyMaterial();
         
-        List<Study.Assistant.Studia.dto.response.QuizDetailResponse.QuestionDetail> questions = quizzes.stream()
-                .map(quiz -> Study.Assistant.Studia.dto.response.QuizDetailResponse.QuestionDetail.builder()
+        List<QuizDetailResponse.QuestionDetail> questions = quizzes.stream()
+                .map(quiz -> QuizDetailResponse.QuestionDetail.builder()
                         .id(quiz.getId())
                         .questionText(quiz.getQuestion())
                         .questionType(quiz.getQuestionType().toString())
@@ -99,13 +99,33 @@ public class QuizService {
                         .build())
                 .collect(Collectors.toList());
         
-        return Study.Assistant.Studia.dto.response.QuizDetailResponse.builder()
+        return QuizDetailResponse.builder()
                 .id(materialId)
                 .title(material.getTitle() + " Quiz")
                 .questions(questions)
                 .totalQuestions(questions.size())
                 .estimatedTime(questions.size() * 2) // 2 minutes per question estimate
                 .build();
+    }
+    
+    /**
+     * 퀴즈 삭제
+     */
+    @Transactional
+    public void deleteQuiz(Long materialId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<Quiz> quizzes = quizRepository.findByStudyMaterial_IdAndStudyMaterial_UserId(materialId, user.getId());
+        
+        if (quizzes.isEmpty()) {
+            throw new RuntimeException("No quizzes found for this material");
+        }
+        
+        // Delete all quizzes for the material
+        quizRepository.deleteAll(quizzes);
+        log.info("Deleted {} quizzes for material ID: {}", quizzes.size(), materialId);
     }
     
     /**
