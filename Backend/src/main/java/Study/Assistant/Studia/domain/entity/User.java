@@ -9,6 +9,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -40,6 +42,18 @@ public class User {
     
     private Integer grade;
     
+    @Column(name = "profile_image")
+    private String profileImage;
+    
+    @Column(name = "status_message")
+    private String statusMessage;
+    
+    @Column(name = "is_online")
+    private Boolean isOnline = false;
+    
+    @Column(name = "last_active_at")
+    private LocalDateTime lastActiveAt;
+    
     @Enumerated(EnumType.STRING)
     private UserRole role = UserRole.STUDENT;
     
@@ -48,6 +62,21 @@ public class User {
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<StudyMaterial> studyMaterials = new ArrayList<>();
+    
+    // Friend relationships
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<Friend> friendRequestsSent = new HashSet<>();
+    
+    @OneToMany(mappedBy = "friend", cascade = CascadeType.ALL)
+    private Set<Friend> friendRequestsReceived = new HashSet<>();
+    
+    // Study group memberships
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<GroupMember> groupMemberships = new HashSet<>();
+    
+    // Owned study groups
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
+    private Set<StudyGroup> ownedGroups = new HashSet<>();
     
     @CreatedDate
     private LocalDateTime createdAt;
