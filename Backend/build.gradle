@@ -69,7 +69,7 @@ tasks.named('test') {
 }
 
 bootJar {
-	destinationDirectory = file("./Backend/build")
+	// destinationDirectory = file("./Backend/build")
 	archiveBaseName = 'studia'
 	archiveFileName = 'studia.jar'
 	archiveVersion = '0.0.1'
