@@ -67,3 +67,10 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+bootJar {
+	destinationDirectory = file("./Backend/build")
+	archiveBaseName = 'studia'
+	archiveFileName = 'studia.jar'
+	archiveVersion = '0.0.1'
+}

@@ -1,0 +1,133 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :resolveMainClassName UP-TO-DATE
+
+> Task :bootRun
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+[32m :: Spring Boot :: [39m              [2m (v3.4.5)[0;39m
+
+[2m2025-06-06T09:30:40.960+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.StudiaApplication    [0;39m [2m:[0;39m Starting StudiaApplication using Java 17.0.15 with PID 46887 (/Users/leesanghoon/Studia/Study Assistant/Backend/build/classes/java/main started by leesanghoon in /Users/leesanghoon/Studia/Study Assistant/Backend)
+[2m2025-06-06T09:30:40.962+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.StudiaApplication    [0;39m [2m:[0;39m Running with Spring Boot v3.4.5, Spring v6.2.6
+[2m2025-06-06T09:30:40.962+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.StudiaApplication    [0;39m [2m:[0;39m The following 1 profile is active: "mysql"
+[2m2025-06-06T09:30:41.278+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36m.s.d.r.c.RepositoryConfigurationDelegate[0;39m [2m:[0;39m Multiple Spring Data modules found, entering strict repository configuration mode
+[2m2025-06-06T09:30:41.279+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36m.s.d.r.c.RepositoryConfigurationDelegate[0;39m [2m:[0;39m Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+[2m2025-06-06T09:30:41.341+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36m.s.d.r.c.RepositoryConfigurationDelegate[0;39m [2m:[0;39m Finished Spring Data repository scanning in 59 ms. Found 5 JPA repository interfaces.
+[2m2025-06-06T09:30:41.625+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.s.b.w.embedded.tomcat.TomcatWebServer [0;39m [2m:[0;39m Tomcat initialized with port 8080 (http)
+[2m2025-06-06T09:30:41.631+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.apache.catalina.core.StandardService  [0;39m [2m:[0;39m Starting service [Tomcat]
+[2m2025-06-06T09:30:41.631+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.apache.catalina.core.StandardEngine   [0;39m [2m:[0;39m Starting Servlet engine: [Apache Tomcat/10.1.40]
+[2m2025-06-06T09:30:41.655+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.a.c.c.C.[Tomcat].[localhost].[/]      [0;39m [2m:[0;39m Initializing Spring embedded WebApplicationContext
+[2m2025-06-06T09:30:41.655+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mw.s.c.ServletWebServerApplicationContext[0;39m [2m:[0;39m Root WebApplicationContext: initialization completed in 676 ms
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+🔐 JWT Secret (Base64 Length): 96
+🔐 Decoded Key Length (bytes): 70
+[2m2025-06-06T09:30:41.728+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.hibernate.jpa.internal.util.LogHelper [0;39m [2m:[0;39m HHH000204: Processing PersistenceUnitInfo [name: default]
+[2m2025-06-06T09:30:41.746+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36morg.hibernate.Version                   [0;39m [2m:[0;39m HHH000412: Hibernate ORM core version 6.6.13.Final
+[2m2025-06-06T09:30:41.757+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.h.c.internal.RegionFactoryInitiator   [0;39m [2m:[0;39m HHH000026: Second-level cache disabled
+[2m2025-06-06T09:30:41.853+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.s.o.j.p.SpringPersistenceUnitInfo     [0;39m [2m:[0;39m No LoadTimeWeaver setup: ignoring JPA class transformer
+[2m2025-06-06T09:30:41.864+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mcom.zaxxer.hikari.HikariDataSource      [0;39m [2m:[0;39m HikariPool-1 - Starting...
+[2m2025-06-06T09:30:41.930+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@2fa47368
+[2m2025-06-06T09:30:41.931+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mcom.zaxxer.hikari.HikariDataSource      [0;39m [2m:[0;39m HikariPool-1 - Start completed.
+[2m2025-06-06T09:30:41.940+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.h.e.j.e.i.JdbcEnvironmentInitiator    [0;39m [2m:[0;39m HHH000339: Could not obtain connection metadata: java.sql.SQLSyntaxErrorException: Unknown column 'RESERVED' in 'WHERE'
+[2m2025-06-06T09:30:41.945+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36morg.hibernate.orm.deprecation           [0;39m [2m:[0;39m HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+[2m2025-06-06T09:30:41.950+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36morg.hibernate.orm.connections.pooling   [0;39m [2m:[0;39m HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+[2m2025-06-06T09:30:42.363+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.h.e.t.j.p.i.JtaPlatformInitiator      [0;39m [2m:[0;39m HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+[2m2025-06-06T09:30:42.540+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mj.LocalContainerEntityManagerFactoryBean[0;39m [2m:[0;39m Initialized JPA EntityManagerFactory for persistence unit 'default'
+[2m2025-06-06T09:30:42.694+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.A.S.security.JwtAuthenticationFilter  [0;39m [2m:[0;39m Filter 'jwtAuthenticationFilter' configured for use
+[2m2025-06-06T09:30:42.694+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.A.Studia.filter.RateLimitFilter       [0;39m [2m:[0;39m Filter 'rateLimitFilter' configured for use
+[2m2025-06-06T09:30:42.694+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.filter.XSSFilter     [0;39m [2m:[0;39m Filter 'XSSFilter' configured for use
+[2m2025-06-06T09:30:42.729+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36meAuthenticationProviderManagerConfigurer[0;39m [2m:[0;39m Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+[2m2025-06-06T09:30:42.729+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mr$InitializeUserDetailsManagerConfigurer[0;39m [2m:[0;39m Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+[2m2025-06-06T09:30:42.746+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.s.d.j.r.query.QueryEnhancerFactory    [0;39m [2m:[0;39m Hibernate is in classpath; If applicable, HQL parser will be used.
+[2m2025-06-06T09:30:42.993+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.service.AIService    [0;39m [2m:[0;39m AI Service initialized with model: openai
+[2m2025-06-06T09:30:42.993+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.service.AIService    [0;39m [2m:[0;39m OpenAI API Key configured: true
+[2m2025-06-06T09:30:42.993+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.service.AIService    [0;39m [2m:[0;39m OpenAI API Key length: 8
+[2m2025-06-06T09:30:43.067+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mJpaBaseConfiguration$JpaWebConfiguration[0;39m [2m:[0;39m spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+[2m2025-06-06T09:30:43.147+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36ms.w.s.m.m.a.RequestMappingHandlerMapping[0;39m [2m:[0;39m 26 mappings in 'requestMappingHandlerMapping'
+[2m2025-06-06T09:30:43.177+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.s.w.s.handler.SimpleUrlHandlerMapping [0;39m [2m:[0;39m Patterns [/webjars/**, /**, /static/**, /swagger-ui*/*swagger-initializer.js, /swagger-ui*/**] in 'resourceHandlerMapping'
+[2m2025-06-06T09:30:43.207+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.s.s.web.DefaultSecurityFilterChain    [0;39m [2m:[0;39m Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, CorsFilter, LogoutFilter, JwtAuthenticationFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+[2m2025-06-06T09:30:43.275+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36ms.w.s.m.m.a.RequestMappingHandlerAdapter[0;39m [2m:[0;39m ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+[2m2025-06-06T09:30:43.301+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36m.m.m.a.ExceptionHandlerExceptionResolver[0;39m [2m:[0;39m ControllerAdvice beans: 2 @ExceptionHandler, 1 ResponseBodyAdvice
+[2m2025-06-06T09:30:43.412+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mo.s.b.w.embedded.tomcat.TomcatWebServer [0;39m [2m:[0;39m Tomcat started on port 8080 (http) with context path '/'
+[2m2025-06-06T09:30:43.417+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [           main] [0;39m[36mS.Assistant.Studia.StudiaApplication    [0;39m [2m:[0;39m Started StudiaApplication in 2.627 seconds (process running for 2.764)
+[2m2025-06-06T09:33:42.204+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.a.c.c.C.[Tomcat].[localhost].[/]      [0;39m [2m:[0;39m Initializing Spring DispatcherServlet 'dispatcherServlet'
+[2m2025-06-06T09:33:42.204+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Initializing Servlet 'dispatcherServlet'
+[2m2025-06-06T09:33:42.204+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Detected StandardServletMultipartResolver
+[2m2025-06-06T09:33:42.204+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Detected AcceptHeaderLocaleResolver
+[2m2025-06-06T09:33:42.204+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Detected FixedThemeResolver
+[2m2025-06-06T09:33:42.204+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@3045fbb4
+[2m2025-06-06T09:33:42.204+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Detected org.springframework.web.servlet.support.SessionFlashMapManager@56c45636
+[2m2025-06-06T09:33:42.205+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+[2m2025-06-06T09:33:42.205+09:00[0;39m [32m INFO[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Completed initialization in 1 ms
+[2m2025-06-06T09:33:42.209+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.security.web.FilterChainProxy       [0;39m [2m:[0;39m Securing GET /api/test/health
+[2m2025-06-06T09:33:42.212+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.s.w.a.AnonymousAuthenticationFilter [0;39m [2m:[0;39m Set SecurityContextHolder to anonymous SecurityContext
+[2m2025-06-06T09:33:42.212+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.security.web.FilterChainProxy       [0;39m [2m:[0;39m Secured GET /api/test/health
+[2m2025-06-06T09:33:42.216+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m GET "/api/test/health", parameters={}
+[2m2025-06-06T09:33:42.217+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36ms.w.s.m.m.a.RequestMappingHandlerMapping[0;39m [2m:[0;39m Mapped to Study.Assistant.Studia.controller.TestController#health()
+[2m2025-06-06T09:33:42.228+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mm.m.a.RequestResponseBodyMethodProcessor[0;39m [2m:[0;39m Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+[2m2025-06-06T09:33:42.228+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mm.m.a.RequestResponseBodyMethodProcessor[0;39m [2m:[0;39m Writing [{service=Studia Backend, status=UP}]
+[2m2025-06-06T09:33:42.233+09:00[0;39m [32mDEBUG[0;39m [35m46887[0;39m [2m--- [studia-backend] [nio-8080-exec-1] [0;39m[36mo.s.web.servlet.DispatcherServlet       [0;39m [2m:[0;39m Completed 200 OK
+[2m2025-06-06T11:20:15.746+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [l-1 housekeeper] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=7m32s710ms).
+[2m2025-06-06T11:37:42.100+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [l-1 housekeeper] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=17m26s355ms).
+[2m2025-06-06T11:38:39.202+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [l-1 housekeeper] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=57s102ms).
+[2m2025-06-06T12:46:15.697+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [l-1 housekeeper] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h7m36s495ms).
+[2m2025-06-06T13:13:42.889+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [l-1 housekeeper] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=26m56s428ms).
+[2m2025-06-06T14:14:39.794+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [l-1 housekeeper] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h26s900ms).
+[2m2025-06-06T14:20:57.172+09:00[0;39m [33m WARN[0;39m [35m46887[0;39m [2m--- [studia-backend] [l-1 housekeeper] [0;39m[36mcom.zaxxer.hikari.pool.HikariPool       [0;39m [2m:[0;39m HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4m44s768ms).
+
+> Task :bootRun FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':bootRun'.
+> Process 'command '/Users/leesanghoon/Library/Java/JavaVirtualMachines/corretto-17.0.15/Contents/Home/bin/java'' finished with non-zero exit value 137
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 5h 11m 26s
+4 actionable tasks: 1 executed, 3 up-to-date
+Exception in thread "Thread-0" org.gradle.api.UncheckedIOException: java.io.IOException: Input/output error
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:63)
+	at org.gradle.internal.UncheckedException.throwAsUncheckedException(UncheckedException.java:42)
+	at org.gradle.internal.daemon.client.clientinput.DaemonClientInputForwarder$ForwardingUserInput.lambda$readAndForwardStdin$0(DaemonClientInputForwarder.java:99)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1575)
+Caused by: java.io.IOException: Input/output error
+	at java.base/java.io.FileInputStream.readBytes(Native Method)
+	at java.base/java.io.FileInputStream.read(FileInputStream.java:328)
+	at java.base/java.lang.System$In.read(System.java:2252)
+	at java.base/java.io.BufferedInputStream.read1(BufferedInputStream.java:345)
+	at java.base/java.io.BufferedInputStream.implRead(BufferedInputStream.java:420)
+	at java.base/java.io.BufferedInputStream.read(BufferedInputStream.java:399)
+	at java.base/sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:350)
+	at java.base/sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:393)
+	at java.base/sun.nio.cs.StreamDecoder.lockedRead(StreamDecoder.java:217)
+	at java.base/sun.nio.cs.StreamDecoder.read(StreamDecoder.java:171)
+	at java.base/java.io.InputStreamReader.read(InputStreamReader.java:190)
+	at java.base/java.io.BufferedReader.read1(BufferedReader.java:223)
+	at java.base/java.io.BufferedReader.implRead(BufferedReader.java:314)
+	at java.base/java.io.BufferedReader.read(BufferedReader.java:296)
+	at java.base/java.io.Reader.read(Reader.java:269)
+	at org.gradle.internal.daemon.client.clientinput.DaemonClientInputForwarder$ForwardingUserInput.lambda$readAndForwardStdin$0(DaemonClientInputForwarder.java:97)
+	... 3 more
