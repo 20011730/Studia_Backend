@@ -5,12 +5,17 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:mysql}  # 기본값은 mysql
     
+  #datasource:
+  #  url: jdbc:mysql://localhost:3306/studia_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+  #  driver-class-name: com.mysql.cj.jdbc.Driver
+  #  username: ${DB_USERNAME:studia_user}
+  #  password: ${DB_PASSWORD:studia_password}
+
   datasource:
-    url: jdbc:mysql://localhost:3306/studia_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${DB_USERNAME:studia_user}
-    password: ${DB_PASSWORD:studia_password} 
-    
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
   h2:
     console:
       enabled: false

@@ -74,3 +74,12 @@ bootJar {
 	archiveFileName = 'studia.jar'
 	archiveVersion = '0.0.1'
 }
+
+
+task copyFrontendStatic(type: Copy) {
+	from "${rootDir}/Frontend"            // Frontend 루트 폴더 안 모든 파일
+	include("**/*.html", "**/assets/**", "**/css/**", "**/assets/**")
+	into "$buildDir/resources/main/static"
+}
+// processResources (static 복사) 전에 실행시키도록
+processResources.dependsOn(copyFrontendStatic)

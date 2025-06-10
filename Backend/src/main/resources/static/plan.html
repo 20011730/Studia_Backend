@@ -1,0 +1,1654 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Study Plan - Studia</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/fontawesome-all.min.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+    <link rel="stylesheet" href="css/sidebar-fixed.css" />
+    <link rel="stylesheet" href="css/dark-mode.css" />
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js'></script>
+    <style>
+        /* Menu Toggle Button Styling - Modern Design */
+        .menu-toggle-btn {
+            position: fixed !important;
+            top: 20px !important;
+            left: 20px !important;
+            background: #f56a6a;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(245, 106, 106, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 40px !important;
+            height: 40px !important;
+            line-height: 40px !important;
+            text-align: center;
+            z-index: 10001;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            visibility: visible !important;
+            opacity: 1 !important;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            padding: 0;
+        }
+        
+        .menu-toggle-btn:hover {
+            background: #f45858;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(245, 106, 106, 0.4);
+        }
+        
+        .menu-toggle-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Toggle button icon animation */
+        .menu-toggle-btn i {
+            transition: all 0.3s ease;
+            width: 20px;
+            height: 20px;
+            position: relative;
+            display: block;
+        }
+        
+        .menu-toggle-btn i::before,
+        .menu-toggle-btn i::after,
+        .menu-toggle-btn span {
+            content: '';
+            position: absolute;
+            background-color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .menu-toggle-btn i::before {
+            left: 0;
+            top: -6px;
+            width: 20px;
+            height: 2px;
+        }
+        
+        .menu-toggle-btn span {
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 2px;
+        }
+        
+        .menu-toggle-btn i::after {
+            left: 0;
+            top: 6px;
+            width: 20px;
+            height: 2px;
+        }
+        
+        /* Toggle button when sidebar is active */
+        body:not(.sidebar-inactive) .menu-toggle-btn i::before {
+            transform: rotate(45deg);
+            top: 0;
+        }
+        
+        body:not(.sidebar-inactive) .menu-toggle-btn span {
+            opacity: 0;
+        }
+        
+        body:not(.sidebar-inactive) .menu-toggle-btn i::after {
+            transform: rotate(-45deg);
+            top: 0;
+        }
+        
+        .schedule-form-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            color: white;
+        }
+        .schedule-form-container h3 {
+            color: white;
+            margin-bottom: 20px;
+        }
+        .schedule-form-container .form-group {
+            margin-bottom: 20px;
+        }
+        .schedule-form-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: white;
+        }
+        .schedule-form-container input[type="text"],
+        .schedule-form-container input[type="date"],
+        .schedule-form-container input[type="time"],
+        .schedule-form-container select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .schedule-form-container input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .schedule-form-container input[type="radio"],
+        .schedule-form-container input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        .schedule-form-container .radio-group,
+        .schedule-form-container .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .time-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .repeat-options {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+        .repeat-days {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .repeat-days label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #calendar {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .fc-event {
+            cursor: pointer;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .fc-event-class {
+            background: #667eea;
+            border-color: #667eea;
+        }
+        .fc-event-exam {
+            background: #f56a6a;
+            border-color: #f56a6a;
+        }
+        .fc-event-study {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .view-toggle button {
+            padding: 10px 20px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .view-toggle button.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .event-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+        .event-modal-content {
+            position: relative;
+            background: white;
+            margin: 10% auto;
+            padding: 30px;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 15px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-close:hover {
+            color: #f56a6a;
+        }
+        
+        /* TODO Styles */
+        .todo-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s;
+        }
+        .todo-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .todo-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .todo-text {
+            flex: 1;
+            font-size: 1em;
+            color: #333;
+        }
+        .todo-text.completed {
+            text-decoration: line-through;
+            color: #999;
+        }
+        .todo-date {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .todo-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .todo-edit-btn, .todo-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .todo-edit-btn:hover {
+            background: #e3f2fd;
+            color: #2196f3;
+        }
+        .todo-delete-btn:hover {
+            background: #ffebee;
+            color: #f44336;
+        }
+        .todo-priority {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        .priority-high {
+            background: #ffebee;
+            color: #f44336;
+        }
+        .priority-medium {
+            background: #fff4e5;
+            color: #ff9800;
+        }
+        .priority-low {
+            background: #e8f5e9;
+            color: #4caf50;
+        }
+        
+        /* Radio button styles */
+        .radio-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        .radio-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+        .radio-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            margin-right: 10px;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .radio-option input[type="radio"]:checked + .radio-custom {
+            border-color: white;
+            background: white;
+        }
+        .radio-option input[type="radio"]:checked + .radio-custom:after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #667eea;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        /* Checkbox styles for days */
+        .day-checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .day-checkbox:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .day-checkbox input[type="checkbox"] {
+            display: none;
+        }
+        .day-checkbox input[type="checkbox"]:checked + span {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+        }
+        .day-checkbox span {
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+    </style>
+</head>
+<body class="is-preload">
+    <!-- Menu Toggle Button -->
+    <button class="menu-toggle-btn" onclick="toggleSidebar()">
+        <i><span></span></i>
+    </button>
+    
+    <!-- Wrapper -->
+    <div id="wrapper">
+        <!-- Main -->
+        <div id="main">
+            <div class="inner">
+                <!-- Header -->
+                <header id="header">
+                    <a href="index.html" class="logo">
+                        <strong style="font-size: 2em;">Studia</strong>
+                    </a>
+                    <ul class="icons">
+                        <li><span id="userWelcome" style="margin-right: 1em;">Welcome!</span></li>
+                        <li><a href="#" onclick="logout()" class="button small">Logout</a></li>
+                    </ul>
+                </header>
+
+                <!-- Content -->
+                <section>
+                    <header class="main">
+                        <h1>Study Plan</h1>
+                        <p>Organize your schedule and let AI help you plan your study sessions</p>
+                    </header>
+
+                    <!-- Schedule Form -->
+                    <div class="schedule-form-container">
+                        <h3>Add New Schedule</h3>
+                        <form id="schedule-form">
+                            <div class="form-group">
+                                <label>Type</label>
+                                <div class="radio-group">
+                                    <label class="radio-option">
+                                        <input type="radio" name="type" value="class" checked onclick="handleTypeChange()">
+                                        <span class="radio-custom"></span>
+                                        <span>Class</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="type" value="exam" onclick="handleTypeChange()">
+                                        <span class="radio-custom"></span>
+                                        <span>Exam</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="type" value="study" onclick="handleTypeChange()">
+                                        <span class="radio-custom"></span>
+                                        <span>Study Session</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="className">Class Name (Optional)</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <select id="classSelect" onchange="handleClassSelect()" style="flex: 1;">
+                                        <option value="">-- Select existing class --</option>
+                                        <option value="__new__">+ Add new class</option>
+                                    </select>
+                                    <input type="text" id="className" name="className" placeholder="Or enter new class name" style="flex: 1;">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="title">Title</label>
+                                <input type="text" id="title" name="title" placeholder="e.g., Data Structures Class" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="date" id="dateLabel">Start Date</label>
+                                <input type="date" id="date" name="date" required>
+                            </div>
+
+                            <div class="form-group" id="allDayContainer" style="display: none;">
+                                <label class="checkbox-label" style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="allDay" name="allDay" onchange="toggleTimeInputs()" style="display: none;">
+                                    <span class="checkbox-custom" style="width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.5); border-radius: 4px; margin-right: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                                        <i class="fas fa-check" style="color: #667eea; font-size: 14px; opacity: 0; transition: opacity 0.3s;"></i>
+                                    </span>
+                                    All Day Event
+                                </label>
+                            </div>
+
+                            <div class="form-group time-inputs" id="timeInputs">
+                                <div>
+                                    <label for="startTime">Start Time</label>
+                                    <input type="time" id="startTime" name="startTime" required>
+                                </div>
+                                <div>
+                                    <label for="endTime">End Time</label>
+                                    <input type="time" id="endTime" name="endTime" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="colorPicker">
+                                <label for="color">Event Color</label>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                                    <input type="color" id="colorInput" name="color" value="#667eea" style="width: 50px; height: 50px; border: none; border-radius: 8px; cursor: pointer;">
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #667eea; cursor: pointer;" onclick="setColor('#667eea')"></button>
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #f56a6a; cursor: pointer;" onclick="setColor('#f56a6a')"></button>
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #4caf50; cursor: pointer;" onclick="setColor('#4caf50')"></button>
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #ff9800; cursor: pointer;" onclick="setColor('#ff9800')"></button>
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #2196f3; cursor: pointer;" onclick="setColor('#2196f3')"></button>
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #9c27b0; cursor: pointer;" onclick="setColor('#9c27b0')"></button>
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #00bcd4; cursor: pointer;" onclick="setColor('#00bcd4')"></button>
+                                        <button type="button" class="color-preset" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: #795548; cursor: pointer;" onclick="setColor('#795548')"></button>
+                                    </div>
+                                </div>
+                                <div id="recentColors" style="margin-top: 10px;">
+                                    <label style="display: block; margin-bottom: 5px; font-size: 0.9em;">Recent Colors:</label>
+                                    <div id="recentColorsList" style="display: flex; gap: 8px;"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="repeat" name="repeat" onchange="toggleRepeatOptions()">
+                                    Repeat Event
+                                </label>
+                            </div>
+
+                            <div class="repeat-options" id="repeatOptions">
+                                <div class="form-group">
+                                    <label for="repeatType">Repeat Type</label>
+                                    <select id="repeatType" name="repeatType">
+                                        <option value="weekly">Weekly</option>
+                                        <option value="biweekly">Bi-weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" id="weeklyDays" style="display: none;">
+                                    <label>Days of Week</label>
+                                    <div class="repeat-days">
+                                        <label class="day-checkbox">
+                                            <input type="checkbox" name="repeatDays" value="1">
+                                            <span>Mon</span>
+                                        </label>
+                                        <label class="day-checkbox">
+                                            <input type="checkbox" name="repeatDays" value="2">
+                                            <span>Tue</span>
+                                        </label>
+                                        <label class="day-checkbox">
+                                            <input type="checkbox" name="repeatDays" value="3">
+                                            <span>Wed</span>
+                                        </label>
+                                        <label class="day-checkbox">
+                                            <input type="checkbox" name="repeatDays" value="4">
+                                            <span>Thu</span>
+                                        </label>
+                                        <label class="day-checkbox">
+                                            <input type="checkbox" name="repeatDays" value="5">
+                                            <span>Fri</span>
+                                        </label>
+                                        <label class="day-checkbox">
+                                            <input type="checkbox" name="repeatDays" value="6">
+                                            <span>Sat</span>
+                                        </label>
+                                        <label class="day-checkbox">
+                                            <input type="checkbox" name="repeatDays" value="0">
+                                            <span>Sun</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="repeatUntil">Repeat Until</label>
+                                    <input type="date" id="repeatUntil" name="repeatUntil">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="button primary">Add to Schedule</button>
+                        </form>
+                    </div>
+
+                    <!-- Filter and View Toggle -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Filter by Class:</label>
+                                <select id="classFilterCalendar" onchange="filterCalendarByClass()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                                    <option value="">All Classes</option>
+                                </select>
+                            </div>
+                            <div class="view-toggle" style="flex: 2;">
+                                <button class="active" onclick="changeView('month')">Month</button>
+                                <button onclick="changeView('week')">Week</button>
+                                <button onclick="changeView('day')">Day</button>
+                                <button onclick="changeView('list')">List</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calendar -->
+                    <div id="calendar"></div>
+
+                    <!-- TODO List -->
+                    <div class="box" style="margin-top: 30px;">
+                        <h3>📝 Study TODO List</h3>
+                        <div class="todo-container">
+                            <div class="todo-input-group" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                                <input type="text" id="todoInput" placeholder="Add a new study task..." style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <button class="button primary" onclick="addTodo()">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                            <div id="todoList">
+                                <!-- TODOs will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Study Plan -->
+                    <div class="box">
+                        <h3>AI Study Plan Generator</h3>
+                        <p>Generate an optimized study plan based on your schedule</p>
+                        <button class="button primary" onclick="generateAIStudyPlan()">
+                            <i class="fas fa-magic"></i> Generate Study Plan
+                        </button>
+                        <div id="aiPlanResult" style="display: none; margin-top: 20px;"></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div id="sidebar">
+            <div class="inner">
+                <!-- Menu -->
+                <nav id="menu">
+                    <header class="major">
+                        <h2>Menu</h2>
+                    </header>
+                    <ul>
+                        <li><a href="index.html">Main</a></li>
+                        <li><a href="summary.html">Summary</a></li>
+                        <li><a href="quiz.html">Quiz</a></li>
+                        <li><a href="plan.html">Study Plan</a></li>
+                        <li><a href="dashboard.html">Dashboard</a></li>
+                        <li><a href="leaderboard.html">Leaderboard</a></li>
+                        <li><a href="friends.html">Friends</a></li>
+                        <li><a href="profile.html">My Page</a></li>
+                    </ul>
+                </nav>
+
+                <!-- Footer -->
+                <footer id="footer">
+                    <p class="copyright">&copy; Studia. Design: <a href="http://html5up.net">HTML5 UP</a>.</p>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="eventModal" class="event-modal">
+        <div class="event-modal-content">
+            <span class="modal-close" onclick="closeEventModal()">&times;</span>
+            <h3 id="modalTitle">Event Details</h3>
+            <div id="modalContent"></div>
+            <div style="margin-top: 20px;">
+                <button class="button primary" onclick="editEvent()">Edit</button>
+                <button class="button" onclick="deleteEvent()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/jquery.min.js"></script>
+    <script src="js/browser.min.js"></script>
+    <script src="js/breakpoints.min.js"></script>
+    <script src="js/util.js"></script>
+    <script src="js/main.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="js/sidebar-toggle.js"></script>
+    <script src="js/dark-mode.js"></script>
+    <script src="js/sidebar-state.js"></script>
+    <script>
+        // Toggle Sidebar Function
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const main = document.getElementById('main');
+            const toggleBtn = document.querySelector('.menu-toggle-btn');
+            
+            sidebar.classList.toggle('inactive');
+            
+            if (sidebar.classList.contains('inactive')) {
+                document.body.classList.add('sidebar-inactive');
+            } else {
+                document.body.classList.remove('sidebar-inactive');
+            }
+        }
+        
+        let calendar;
+        let schedules = [];
+        let todos = [];
+        let currentEvent = null;
+        let editingEventId = null;
+
+        // Check authentication
+        if (!checkAuth()) {
+            window.location.href = 'index.html';
+        }
+
+        // Update welcome message
+        document.getElementById('userWelcome').textContent = `Welcome, ${TokenManager.getUsername() || 'User'}!`;
+
+        // Initialize calendar
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Set initial sidebar state - always start closed
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.add('inactive');
+            document.body.classList.add('sidebar-inactive');
+            
+            await loadSchedules();
+            loadTodos();
+            initializeCalendar();
+            
+            // Update class filter options
+            window.updateClassFilter = function() {
+                const classFilter = document.getElementById('classFilterCalendar');
+                const classSelect = document.getElementById('classSelect');
+                const classes = [...new Set(schedules
+                    .filter(s => s.className)
+                    .map(s => s.className))];
+                
+                // Update calendar filter
+                classFilter.innerHTML = '<option value="">All Classes</option>' +
+                    classes.map(className => 
+                        `<option value="${className}">${className}</option>`
+                    ).join('');
+                
+                // Update form select
+                classSelect.innerHTML = '<option value="">-- Select existing class --</option>' +
+                    classes.map(className => 
+                        `<option value="${className}">${className}</option>`
+                    ).join('') +
+                    '<option value="__new__">+ Add new class</option>';
+            }
+            
+            // Handle class selection
+            window.handleClassSelect = function() {
+                const select = document.getElementById('classSelect');
+                const input = document.getElementById('className');
+                
+                if (select.value === '__new__') {
+                    input.value = '';
+                    input.focus();
+                    input.style.display = 'block';
+                } else if (select.value) {
+                    input.value = select.value;
+                    input.style.display = 'none';
+                } else {
+                    input.value = '';
+                    input.style.display = 'block';
+                }
+            }
+            
+            // Filter calendar by class
+            window.filterCalendarByClass = function() {
+                const selectedClass = document.getElementById('classFilterCalendar').value;
+                
+                if (calendar) {
+                    calendar.removeAllEvents();
+                    
+                    let filteredEvents = getCalendarEvents();
+                    if (selectedClass) {
+                        filteredEvents = filteredEvents.filter(event => 
+                            event.extendedProps.className === selectedClass
+                        );
+                    }
+                    
+                    calendar.addEventSource(filteredEvents);
+                }
+            }
+            
+            // Add checkbox styling functionality
+            const allDayCheckbox = document.getElementById('allDay');
+            if (allDayCheckbox) {
+                allDayCheckbox.addEventListener('change', function() {
+                    const checkIcon = this.parentElement.querySelector('.fa-check');
+                    if (this.checked) {
+                        checkIcon.style.opacity = '1';
+                        this.parentElement.querySelector('.checkbox-custom').style.background = 'white';
+                    } else {
+                        checkIcon.style.opacity = '0';
+                        this.parentElement.querySelector('.checkbox-custom').style.background = 'transparent';
+                    }
+                });
+            }
+            
+            // Add Enter key support for TODO input
+            const todoInput = document.getElementById('todoInput');
+            if (todoInput) {
+                todoInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addTodo();
+                    }
+                });
+            }
+            
+            // Update recent colors
+            updateRecentColors();
+        });
+
+        function initializeCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                },
+                editable: true,
+                droppable: true,
+                events: getCalendarEvents(),
+                eventClick: function(info) {
+                    showEventModal(info.event);
+                },
+                eventDrop: function(info) {
+                    updateEventDateTime(info.event);
+                },
+                eventResize: function(info) {
+                    updateEventDateTime(info.event);
+                },
+                height: 'auto',
+                views: {
+                    timeGridWeek: {
+                        allDaySlot: true
+                    },
+                    timeGridDay: {
+                        allDaySlot: true
+                    }
+                }
+            });
+            calendar.render();
+        }
+
+        function getCalendarEvents() {
+            return schedules.map(schedule => ({
+                id: schedule.id,
+                title: schedule.title,
+                start: schedule.allDay ? schedule.date : schedule.date + 'T' + schedule.startTime,
+                end: schedule.allDay ? null : schedule.date + 'T' + schedule.endTime,
+                allDay: schedule.allDay || false,
+                backgroundColor: schedule.color || (schedule.type === 'class' ? '#667eea' : schedule.type === 'exam' ? '#f56a6a' : '#4caf50'),
+                borderColor: schedule.color || (schedule.type === 'class' ? '#667eea' : schedule.type === 'exam' ? '#f56a6a' : '#4caf50'),
+                extendedProps: schedule
+            }));
+        }
+
+        function handleTypeChange() {
+            const selectedType = document.querySelector('input[name="type"]:checked').value;
+            const dateLabel = document.getElementById('dateLabel');
+            const allDayContainer = document.getElementById('allDayContainer');
+            const repeatOptions = document.getElementById('repeat').parentElement;
+            
+            if (selectedType === 'class') {
+                dateLabel.textContent = 'Start Date';
+                allDayContainer.style.display = 'block';
+                repeatOptions.style.display = 'block';
+            } else {
+                dateLabel.textContent = 'Date';
+                allDayContainer.style.display = 'none';
+                repeatOptions.style.display = 'block';
+                document.getElementById('allDay').checked = false;
+                toggleTimeInputs();
+            }
+        }
+
+        function toggleTimeInputs() {
+            const allDay = document.getElementById('allDay').checked;
+            const timeInputs = document.getElementById('timeInputs');
+            const startTime = document.getElementById('startTime');
+            const endTime = document.getElementById('endTime');
+            
+            if (allDay) {
+                timeInputs.style.display = 'none';
+                startTime.removeAttribute('required');
+                endTime.removeAttribute('required');
+            } else {
+                timeInputs.style.display = 'grid';
+                startTime.setAttribute('required', 'required');
+                endTime.setAttribute('required', 'required');
+            }
+        }
+
+        async function loadSchedules() {
+            try {
+                // 백엔드에서 스케줄 불러오기
+                const serverSchedules = await API.studyPlans.getAll();
+                
+                // 서버 데이터를 로컬 형식으로 변환
+                schedules = serverSchedules.map(plan => ({
+                    id: plan.id.toString(),
+                    type: plan.type,
+                    title: plan.title,
+                    date: plan.date,
+                    startTime: plan.startTime || '00:00',
+                    endTime: plan.endTime || '23:59',
+                    allDay: plan.allDay,
+                    color: plan.color,
+                    repeat: plan.repeat,
+                    repeatType: plan.repeatType,
+                    repeatUntil: plan.repeatUntil,
+                    repeatDays: plan.repeatDays,
+                    className: plan.className,
+                    description: plan.description
+                }));
+                
+                // 로컬 스토리지와 동기화 (백업용)
+                localStorage.setItem('studiaSchedules', JSON.stringify(schedules));
+                
+                // 클래스 필터 업데이트
+                updateClassFilter();
+                
+            } catch (error) {
+                console.error('Failed to load schedules from server:', error);
+                // 서버 연결 실패시 로컬 스토리지에서 불러오기
+                const saved = localStorage.getItem('studiaSchedules');
+                if (saved) {
+                    schedules = JSON.parse(saved);
+                }
+            }
+        }
+
+        async function saveSchedules() {
+            // 로컬 스토리지 업데이트 (즉시 반영)
+            localStorage.setItem('studiaSchedules', JSON.stringify(schedules));
+            
+            // 캘린더 업데이트
+            if (calendar) {
+                calendar.removeAllEvents();
+                calendar.addEventSource(getCalendarEvents());
+            }
+        }
+
+        function toggleRepeatOptions() {
+            const repeatOptions = document.getElementById('repeatOptions');
+            const repeat = document.getElementById('repeat').checked;
+            repeatOptions.style.display = repeat ? 'block' : 'none';
+            
+            if (repeat) {
+                const repeatType = document.getElementById('repeatType');
+                const weeklyDays = document.getElementById('weeklyDays');
+                
+                repeatType.addEventListener('change', function() {
+                    weeklyDays.style.display = this.value === 'weekly' ? 'block' : 'none';
+                });
+                
+                // Trigger initial state
+                weeklyDays.style.display = repeatType.value === 'weekly' ? 'block' : 'none';
+            }
+        }
+
+        document.getElementById('schedule-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const schedule = {
+                id: editingEventId || Date.now().toString(),
+                type: formData.get('type'),
+                title: formData.get('title'),
+                date: formData.get('date'),
+                startTime: formData.get('startTime') || '00:00',
+                endTime: formData.get('endTime') || '23:59',
+                allDay: formData.get('allDay') === 'on',
+                color: formData.get('color'),
+                repeat: formData.get('repeat') === 'on'
+            };
+
+            // 서버에 저장할 데이터 준비
+            const planRequest = {
+                title: schedule.title,
+                type: schedule.type,
+                date: schedule.date,
+                startTime: schedule.allDay ? null : schedule.startTime,
+                endTime: schedule.allDay ? null : schedule.endTime,
+                allDay: schedule.allDay,
+                color: schedule.color,
+                repeat: schedule.repeat,
+                className: formData.get('className') || null,
+                description: formData.get('description') || null
+            };
+
+            if (schedule.repeat) {
+                planRequest.repeatType = formData.get('repeatType');
+                planRequest.repeatUntil = formData.get('repeatUntil') || null;
+                if (planRequest.repeatType === 'weekly') {
+                    planRequest.repeatDays = Array.from(document.querySelectorAll('input[name="repeatDays"]:checked'))
+                        .map(cb => parseInt(cb.value));
+                }
+            }
+
+            try {
+                console.log('Saving schedule:', editingEventId ? 'Update' : 'Create', planRequest);
+                
+                if (editingEventId) {
+                    // 기존 일정 업데이트
+                    const response = await API.studyPlans.update(editingEventId, planRequest);
+                    console.log('Update response:', response);
+                } else {
+                    // 새 일정 생성
+                    const response = await API.studyPlans.create(planRequest);
+                    console.log('Create response:', response);
+                    if (response && response.id) {
+                        schedule.id = response.id.toString();
+                    }
+                }
+                
+                // 성공 시 로컬 업데이트 및 캘린더 새로고침
+                await loadSchedules();
+                console.log('Schedule saved successfully');
+                
+            } catch (error) {
+                console.error('Failed to save schedule:', error);
+                console.error('Error details:', error.response || error.message);
+                alert('일정 저장에 실패했습니다. 다시 시도해주세요.\n\n오류: ' + (error.message || 'Unknown error'));
+                return;
+            }
+
+            // 폼 초기화
+            this.reset();
+            editingEventId = null;
+            document.getElementById('repeatOptions').style.display = 'none';
+            document.getElementById('allDayContainer').style.display = 'none';
+            document.getElementById('timeInputs').style.display = 'grid';
+        });
+
+        function generateRecurringEvents(baseSchedule) {
+            const startDate = new Date(baseSchedule.date);
+            const endDate = baseSchedule.repeatUntil ? new Date(baseSchedule.repeatUntil) : new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 3); // Default 3 months if not specified
+
+            let currentDate = new Date(startDate);
+            let eventCount = 0;
+
+            while (currentDate <= endDate && eventCount < 50) { // Limit to 50 occurrences
+                if (baseSchedule.repeatType === 'weekly' && baseSchedule.repeatDays) {
+                    baseSchedule.repeatDays.forEach(day => {
+                        const dayNum = parseInt(day);
+                        const tempDate = new Date(currentDate);
+                        const daysToAdd = (dayNum - tempDate.getDay() + 7) % 7;
+                        tempDate.setDate(tempDate.getDate() + daysToAdd);
+                        
+                        if (tempDate >= startDate && tempDate <= endDate) {
+                            schedules.push({
+                                ...baseSchedule,
+                                id: baseSchedule.id + '-' + Date.now() + eventCount++,
+                                date: tempDate.toISOString().split('T')[0],
+                                repeat: false
+                            });
+                        }
+                    });
+                    currentDate.setDate(currentDate.getDate() + 7);
+                } else if (baseSchedule.repeatType === 'biweekly') {
+                    schedules.push({
+                        ...baseSchedule,
+                        id: baseSchedule.id + '-' + Date.now() + eventCount++,
+                        date: currentDate.toISOString().split('T')[0],
+                        repeat: false
+                    });
+                    currentDate.setDate(currentDate.getDate() + 14);
+                } else if (baseSchedule.repeatType === 'monthly') {
+                    schedules.push({
+                        ...baseSchedule,
+                        id: baseSchedule.id + '-' + Date.now() + eventCount++,
+                        date: currentDate.toISOString().split('T')[0],
+                        repeat: false
+                    });
+                    currentDate.setMonth(currentDate.getMonth() + 1);
+                }
+            }
+        }
+
+        function setColor(color) {
+            document.getElementById('colorInput').value = color;
+            
+            // Update color preset buttons to show selected state
+            document.querySelectorAll('.color-preset').forEach(btn => {
+                btn.style.border = 'none';
+                btn.style.transform = 'scale(1)';
+            });
+            
+            event.target.style.border = '3px solid white';
+            event.target.style.transform = 'scale(1.1)';
+            
+            // Save to recent colors
+            saveRecentColor(color);
+        }
+        
+        // Recent colors management
+        function saveRecentColor(color) {
+            let recentColors = JSON.parse(localStorage.getItem('recentColors') || '[]');
+            
+            // Remove if already exists
+            recentColors = recentColors.filter(c => c !== color);
+            
+            // Add to beginning
+            recentColors.unshift(color);
+            
+            // Keep only last 8 colors
+            recentColors = recentColors.slice(0, 8);
+            
+            localStorage.setItem('recentColors', JSON.stringify(recentColors));
+            updateRecentColors();
+        }
+        
+        function updateRecentColors() {
+            const recentColors = JSON.parse(localStorage.getItem('recentColors') || '[]');
+            const container = document.getElementById('recentColorsList');
+            
+            if (recentColors.length === 0) {
+                document.getElementById('recentColors').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('recentColors').style.display = 'block';
+            container.innerHTML = recentColors.map(color => 
+                `<button type="button" class="color-preset" style="width: 35px; height: 35px; border: none; border-radius: 8px; background: ${color}; cursor: pointer;" onclick="setColor('${color}')"></button>`
+            ).join('');
+        }
+        
+        // Calendar Day view improvements
+        function changeView(viewName) {
+            document.querySelectorAll('.view-toggle button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            const viewMap = {
+                'month': 'dayGridMonth',
+                'week': 'timeGridWeek',
+                'day': 'timeGridDay',
+                'list': 'listMonth'  // Changed to listMonth to show all events
+            };
+            
+            calendar.changeView(viewMap[viewName]);
+        }
+
+        function showEventModal(event) {
+            currentEvent = event;
+            document.getElementById('modalTitle').textContent = event.title;
+            
+            const props = event.extendedProps;
+            let timeDisplay = props.allDay ? 'All Day' : `${props.startTime} - ${props.endTime}`;
+            
+            document.getElementById('modalContent').innerHTML = `
+                <p><strong>Type:</strong> ${props.type.charAt(0).toUpperCase() + props.type.slice(1)}</p>
+                <p><strong>Date:</strong> ${new Date(props.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p><strong>Time:</strong> ${timeDisplay}</p>
+                ${props.repeat ? `<p><strong>Recurring:</strong> ${props.repeatType}</p>` : ''}
+            `;
+            document.getElementById('eventModal').style.display = 'block';
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+            currentEvent = null;
+        }
+
+        function editEvent() {
+            if (!currentEvent) return;
+            
+            const schedule = schedules.find(s => s.id === currentEvent.id);
+            if (!schedule) return;
+            
+            // Set editing mode
+            editingEventId = schedule.id;
+            
+            // Fill form with event data
+            document.querySelector(`input[name="type"][value="${schedule.type}"]`).checked = true;
+            handleTypeChange(); // Update form based on type
+            
+            document.getElementById('title').value = schedule.title;
+            document.getElementById('date').value = schedule.date;
+            
+            if (schedule.allDay) {
+                document.getElementById('allDay').checked = true;
+                toggleTimeInputs();
+            } else {
+                document.getElementById('startTime').value = schedule.startTime;
+                document.getElementById('endTime').value = schedule.endTime;
+            }
+            
+            if (schedule.color) {
+                document.getElementById('color').value = schedule.color;
+            }
+            
+            // Scroll to form
+            document.querySelector('.schedule-form-container').scrollIntoView({ behavior: 'smooth' });
+            
+            // Close modal
+            closeEventModal();
+        }
+
+        async function deleteEvent() {
+            if (!currentEvent) return;
+            
+            const eventId = currentEvent.id;
+            const event = schedules.find(s => s.id === eventId);
+            
+            if (!event) return;
+            
+            // 반복 일정인지 확인
+            if (event.repeat || event.repeatType) {
+                const choice = confirm('이것은 반복 일정입니다.\n\n모든 반복 일정을 삭제하려면 "확인"을,\n이 일정만 삭제하려면 "취소"를 누르세요.');
+                
+                if (choice) {
+                    // 모든 반복 일정 삭제
+                    const baseId = eventId.split('-')[0];
+                    const relatedEvents = schedules.filter(s => 
+                        s.id.startsWith(baseId) || 
+                        (s.title === event.title && s.repeatType === event.repeatType)
+                    );
+                    
+                    if (relatedEvents.length > 1) {
+                        if (!confirm(`총 ${relatedEvents.length}개의 반복 일정이 삭제됩니다. 계속하시겠습니까?`)) {
+                            return;
+                        }
+                    }
+                    
+                    // 서버에서 모든 관련 일정 삭제
+                    for (const relatedEvent of relatedEvents) {
+                        try {
+                            await API.studyPlans.delete(relatedEvent.id);
+                        } catch (error) {
+                            console.error(`Failed to delete event ${relatedEvent.id}:`, error);
+                        }
+                    }
+                } else {
+                    // 단일 일정만 삭제
+                    try {
+                        await API.studyPlans.delete(eventId);
+                    } catch (error) {
+                        console.error('Failed to delete event:', error);
+                        alert('일정 삭제에 실패했습니다.');
+                        return;
+                    }
+                }
+            } else {
+                // 단일 일정 삭제
+                if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+                
+                try {
+                    await API.studyPlans.delete(eventId);
+                } catch (error) {
+                    console.error('Failed to delete event:', error);
+                    alert('일정 삭제에 실패했습니다.');
+                    return;
+                }
+            }
+            
+            // 성공 시 로컬 업데이트 및 캘린더 새로고침
+            await loadSchedules();
+            closeEventModal();
+        }
+
+        async function updateEventDateTime(event) {
+            const schedule = schedules.find(s => s.id === event.id);
+            if (!schedule) return;
+            
+            const newDate = event.start.toISOString().split('T')[0];
+            const newStartTime = event.start.toTimeString().substr(0, 5);
+            const newEndTime = event.end ? event.end.toTimeString().substr(0, 5) : schedule.endTime;
+            
+            // 서버에 업데이트 요청
+            const updateRequest = {
+                title: schedule.title,
+                type: schedule.type,
+                date: newDate,
+                startTime: schedule.allDay ? null : newStartTime,
+                endTime: schedule.allDay ? null : newEndTime,
+                allDay: schedule.allDay,
+                color: schedule.color,
+                repeat: false, // 드래그한 일정은 반복 해제
+                className: schedule.className,
+                description: schedule.description
+            };
+            
+            try {
+                await API.studyPlans.update(event.id, updateRequest);
+                
+                // 성공 시 로컬 업데이트
+                schedule.date = newDate;
+                schedule.startTime = newStartTime;
+                schedule.endTime = newEndTime;
+                
+                saveSchedules();
+            } catch (error) {
+                console.error('Failed to update event:', error);
+                alert('일정 업데이트에 실패했습니다.');
+                
+                // 실패 시 캘린더 새로고침으로 원래 상태로 복구
+                await loadSchedules();
+                if (calendar) {
+                    calendar.refetchEvents();
+                }
+            }
+        }
+
+        async function generateAIStudyPlan() {
+            const resultDiv = document.getElementById('aiPlanResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> AI가 당신의 맞춤형 학습 계획을 생성하고 있습니다...</p>';
+
+            try {
+                // 수업과 시험 일정 필터링
+                const classes = schedules.filter(s => s.type === 'class');
+                const exams = schedules.filter(s => s.type === 'exam');
+                
+                if (classes.length === 0 && exams.length === 0) {
+                    resultDiv.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <i class="fas fa-calendar-times" style="font-size: 3em; color: #dee2e6; margin-bottom: 15px;"></i>
+                            <h4>일정이 없습니다</h4>
+                            <p>먼저 수업이나 시험 일정을 추가해주세요.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 데이터 형식 정리
+                const coursesData = classes.map(c => ({
+                    title: c.title,
+                    date: c.date,
+                    time: c.allDay ? 'All Day' : `${c.startTime} - ${c.endTime}`,
+                    repeat: c.repeat || false,
+                    repeatType: c.repeatType || null
+                }));
+                
+                const examsData = exams.map(e => ({
+                    title: e.title,
+                    date: e.date,
+                    time: `${e.startTime} - ${e.endTime}`
+                }));
+                
+                // AI API 호출
+                const response = await API.ai.generateStudyPlan({
+                    courses: coursesData,
+                    exams: examsData
+                });
+                
+                // 마크다운을 HTML로 변환
+                const htmlContent = convertMarkdownToHtml(response);
+                
+                resultDiv.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08);">
+                        ${htmlContent}
+                        <div style="margin-top: 30px; text-align: center;">
+                            <button class="button" onclick="copyStudyPlan()">
+                                <i class="fas fa-copy"></i> 복사하기
+                            </button>
+                            <button class="button primary" onclick="applyStudyPlan()">
+                                <i class="fas fa-calendar-plus"></i> 캘린더에 적용
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error generating study plan:', error);
+                resultDiv.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #f44336;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3em; margin-bottom: 15px;"></i>
+                        <h4>학습 계획 생성 실패</h4>
+                        <p>${error.message}</p>
+                        <button class="button" onclick="generateAIStudyPlan()" style="margin-top: 15px;">
+                            <i class="fas fa-redo"></i> 다시 시도
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        // 마크다운을 HTML로 변환하는 헬퍼 함수
+        function convertMarkdownToHtml(markdown) {
+            // 간단한 마크다운 변환 (실제로는 marked.js 같은 라이브러리 사용 권장)
+            let html = markdown
+                // 헤더 변환
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                // 볼드체 변환
+                .replace(/\*\*(.*)\*\*/g, '<strong>$1</strong>')
+                // 리스트 변환
+                .replace(/^\* (.+)$/gim, '<li>$1</li>')
+                .replace(/^- (.+)$/gim, '<li>$1</li>')
+                .replace(/^\d+\. (.+)$/gim, '<li>$1</li>')
+                // 줄바꿈 변환
+                .replace(/\n\n/g, '</p><p>')
+                // 이모지 유지
+                .replace(/✅/g, '<span style="color: #4caf50;">✅</span>')
+                .replace(/📅/g, '<span style="font-size: 1.2em;">📅</span>')
+                .replace(/🎯/g, '<span style="font-size: 1.2em;">🎯</span>')
+                .replace(/⏰/g, '<span style="font-size: 1.2em;">⏰</span>')
+                .replace(/📊/g, '<span style="font-size: 1.2em;">📊</span>')
+                .replace(/🔄/g, '<span style="font-size: 1.2em;">🔄</span>')
+                .replace(/📝/g, '<span style="font-size: 1.2em;">📝</span>')
+                .replace(/💡/g, '<span style="font-size: 1.2em;">💡</span>')
+                .replace(/⚠️/g, '<span style="color: #ff9800;">⚠️</span>')
+                .replace(/📈/g, '<span style="font-size: 1.2em;">📈</span>');
+            
+            // 리스트 태그 감싸기
+            html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+            
+            // 단락 태그 감싸기
+            if (!html.startsWith('<')) {
+                html = '<p>' + html + '</p>';
+            }
+            
+            return html;
+        }
+        
+        // 학습 계획 복사 함수
+        function copyStudyPlan() {
+            const planContent = document.querySelector('#aiPlanResult .button').parentElement.parentElement.innerText;
+            navigator.clipboard.writeText(planContent).then(() => {
+                alert('학습 계획이 클립보드에 복사되었습니다!');
+            }).catch(err => {
+                console.error('복사 실패:', err);
+                alert('복사에 실패했습니다. 수동으로 선택하여 복사해주세요.');
+            });
+        }
+        
+        // 학습 계획을 캘린더에 적용하는 함수
+        function applyStudyPlan() {
+            // 학습 계획에서 추천된 시간대를 파싱하여 캘린더에 추가하는 로직
+            // 이는 더 복잡한 구현이 필요하므로 일단 안내 메시지만 표시
+            alert('학습 계획의 추천 시간대를 참고하여 캘린더에 직접 일정을 추가해주세요.');
+        }
+
+        function logout() {
+            API.auth.logout();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('eventModal');
+            if (event.target == modal) {
+                closeEventModal();
+            }
+        }
+        
+        // TODO Functions
+        function loadTodos() {
+            const saved = localStorage.getItem('studiaTodos');
+            if (saved) {
+                todos = JSON.parse(saved);
+                renderTodos();
+            }
+        }
+        
+        function saveTodos() {
+            localStorage.setItem('studiaTodos', JSON.stringify(todos));
+        }
+        
+        function renderTodos() {
+            const todoList = document.getElementById('todoList');
+            
+            if (todos.length === 0) {
+                todoList.innerHTML = '<p style="text-align: center; color: #999;">No tasks yet. Add your first study task!</p>';
+                return;
+            }
+            
+            // Sort todos by completion status, priority, and date
+            const sortedTodos = [...todos].sort((a, b) => {
+                if (a.completed !== b.completed) {
+                    return a.completed ? 1 : -1;
+                }
+                // Priority order: high > medium > low > null
+                const priorityOrder = { high: 3, medium: 2, low: 1, null: 0 };
+                const aPriority = priorityOrder[a.priority] || 0;
+                const bPriority = priorityOrder[b.priority] || 0;
+                if (aPriority !== bPriority) {
+                    return bPriority - aPriority;
+                }
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+            
+            todoList.innerHTML = sortedTodos.map(todo => `
+                <div class="todo-item" data-id="${todo.id}">
+                    <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} 
+                           onchange="toggleTodo('${todo.id}')">
+                    <div style="flex: 1;">
+                        <div class="todo-text ${todo.completed ? 'completed' : ''}">${todo.text}</div>
+                        <div style="display: flex; gap: 15px; margin-top: 5px; font-size: 0.85em; color: #666;">
+                            ${todo.dueDate ? `<span><i class="fas fa-calendar"></i> ${new Date(todo.dueDate).toLocaleDateString()}</span>` : ''}
+                            ${todo.dueTime ? `<span><i class="fas fa-clock"></i> ${todo.dueTime}</span>` : ''}
+                            ${todo.notes ? `<span><i class="fas fa-sticky-note"></i> Notes</span>` : ''}
+                        </div>
+                    </div>
+                    ${todo.priority ? `<span class="todo-priority priority-${todo.priority}">${todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</span>` : ''}
+                    <div class="todo-actions">
+                        <button class="todo-edit-btn" onclick="editTodo('${todo.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="todo-delete-btn" onclick="deleteTodo('${todo.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function addTodo() {
+            const input = document.getElementById('todoInput');
+            const text = input.value.trim();
+            
+            if (!text) {
+                alert('Please enter a task');
+                return;
+            }
+            
+            // Show todo details modal
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; width: 90%;">
+                        <h3 style="margin-top: 0;">Add Task Details</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px;">Task:</label>
+                            <input type="text" id="todoText" value="${text}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px;">Priority:</label>
+                            <select id="todoPriority" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <option value="">No Priority</option>
+                                <option value="high">High Priority</option>
+                                <option value="medium">Medium Priority</option>
+                                <option value="low">Low Priority</option>
+                            </select>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px;">Due Date (Optional):</label>
+                            <input type="date" id="todoDueDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px;">Time (Optional):</label>
+                            <input type="time" id="todoDueTime" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px;">Notes (Optional):</label>
+                            <textarea id="todoNotes" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button onclick="this.closest('div').parentElement.remove()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer;">Cancel</button>
+                            <button onclick="saveTodoWithDetails()" style="padding: 10px 20px; border: none; background: #667eea; color: white; border-radius: 5px; cursor: pointer;">Save Task</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Store modal reference for saving
+            window.currentTodoModal = modal;
+        }
+        
+        function saveTodoWithDetails() {
+            const text = document.getElementById('todoText').value.trim();
+            const priority = document.getElementById('todoPriority').value;
+            const dueDate = document.getElementById('todoDueDate').value;
+            const dueTime = document.getElementById('todoDueTime').value;
+            const notes = document.getElementById('todoNotes').value.trim();
+            
+            if (!text) {
+                alert('Task description is required');
+                return;
+            }
+            
+            const todo = {
+                id: Date.now().toString(),
+                text: text,
+                completed: false,
+                createdAt: new Date().toISOString(),
+                priority: priority || null,
+                dueDate: dueDate || null,
+                dueTime: dueTime || null,
+                notes: notes || null
+            };
+            
+            todos.push(todo);
+            saveTodos();
+            renderTodos();
+            
+            // Clear input
+            document.getElementById('todoInput').value = '';
+            
+            // Close modal
+            if (window.currentTodoModal) {
+                window.currentTodoModal.remove();
+                window.currentTodoModal = null;
+            }
+            
+            // Optional: Add to calendar as a task
+            if (dueDate && confirm('Would you like to add this task to your calendar?')) {
+                addTodoToCalendar(todo);
+            }
+        }
+        
+        function toggleTodo(id) {
+            const todo = todos.find(t => t.id === id);
+            if (todo) {
+                todo.completed = !todo.completed;
+                todo.completedAt = todo.completed ? new Date().toISOString() : null;
+                saveTodos();
+                renderTodos();
+            }
+        }
+        
+        function editTodo(id) {
+            const todo = todos.find(t => t.id === id);
+            if (!todo) return;
+            
+            const newText = prompt('Edit task:', todo.text);
+            if (newText && newText.trim()) {
+                todo.text = newText.trim();
+                todo.updatedAt = new Date().toISOString();
+                saveTodos();
+                renderTodos();
+            }
+        }
+        
+        function deleteTodo(id) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                todos = todos.filter(t => t.id !== id);
+                saveTodos();
+                renderTodos();
+            }
+        }
+        
+        function addTodoToCalendar(todo) {
+            const today = new Date().toISOString().split('T')[0];
+            const schedule = {
+                id: 'todo-' + todo.id,
+                type: 'study',
+                title: 'TODO: ' + todo.text,
+                date: today,
+                startTime: '09:00',
+                endTime: '10:00',
+                allDay: false,
+                color: '#4caf50'
+            };
+            
+            schedules.push(schedule);
+            saveSchedules();
+        }
+        
+        // Add Enter key support for TODO input
+        document.addEventListener('DOMContentLoaded', function() {
+            const todoInput = document.getElementById('todoInput');
+            if (todoInput) {
+                todoInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        addTodo();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

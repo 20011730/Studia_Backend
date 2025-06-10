@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -48,7 +49,8 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
-    
+
+    /*
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -71,7 +73,33 @@ public class SecurityConfig {
         
         return http.build();
     }
-    
+    */
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(authz -> authz
+                        // 1) 프론트 정적 리소스 (index.html, JS/CSS, assets) 모두 인증 없이 허용
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/static/**",
+                                "/css/**",
+                                "/js/**",
+                                "/assets/**"
+                        ).permitAll()
+                        // 2) API 엔드포인트만 인증 필요 (/api/** 패턴 사용 시)
+                        .requestMatchers("/api/**").authenticated()
+                        // 3) 그 외 경로는 기본적으로 열어두거나 인증 처리
+                        .anyRequest().permitAll()
+                )
+                // HTTP Basic or Form 로그인 중 선택
+                .httpBasic(Customizer.withDefaults());
+        // .formLogin(Customizer.withDefaults());  // Form 로그인 쓸 땐 이걸 켭니다.
+        return http.build();
+    }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
