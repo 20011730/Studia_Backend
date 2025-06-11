@@ -61,6 +61,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                /*
             .authorizeHttpRequests(authz -> authz
                 // Static resources - no authentication required
                 .requestMatchers(
@@ -104,7 +105,10 @@ public class SecurityConfig {
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        
+             */
+            .authorizeHttpRequests(authz -> authz.anyRequest().permitAll());
+                                       // 모든 요청을 인증 없이 허용
+
         // H2 Console을 위한 설정 (개발용)
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
         
