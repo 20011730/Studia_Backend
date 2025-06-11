@@ -1,5 +1,11 @@
 // API Configuration with caching
-const API_BASE_URL = 'http://localhost:8080/api';
+// Dynamically set API URL based on environment
+const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:8080/api' 
+    : `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/api`;
+
+console.log('API Base URL:', API_BASE_URL);
+
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const QUIZ_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes for quiz data
 const cache = new Map();
@@ -36,53 +42,109 @@ function checkAuth() {
     return !!token;
 }
 
-// API Client
+// API Client with better error handling
 const apiClient = {
-    get: (url, options = {}) => {
-        return fetch(`${API_BASE_URL}${url}`, {
-            ...options,
-            headers: {
-                'Authorization': `Bearer ${TokenManager.getToken()}`,
-                ...options.headers
+    get: async (url, options = {}) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}${url}`, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${TokenManager.getToken()}`,
+                    ...options.headers
+                }
+            });
+            
+            if (response.status === 401) {
+                console.error('Authentication failed');
+                TokenManager.removeToken();
+                window.location.href = '/';
+                throw new Error('Authentication failed');
             }
-        });
+            
+            return response;
+        } catch (error) {
+            console.error('API GET Error:', error);
+            throw error;
+        }
     },
     
-    post: (url, data, options = {}) => {
-        return fetch(`${API_BASE_URL}${url}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${TokenManager.getToken()}`,
-                ...options.headers
-            },
-            body: JSON.stringify(data),
-            ...options
-        });
+    post: async (url, data, options = {}) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}${url}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${TokenManager.getToken()}`,
+                    ...options.headers
+                },
+                body: JSON.stringify(data),
+                ...options
+            });
+            
+            if (response.status === 401) {
+                console.error('Authentication failed');
+                TokenManager.removeToken();
+                window.location.href = '/';
+                throw new Error('Authentication failed');
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('API POST Error:', error);
+            throw error;
+        }
     },
     
-    put: (url, data, options = {}) => {
-        return fetch(`${API_BASE_URL}${url}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${TokenManager.getToken()}`,
-                ...options.headers
-            },
-            body: JSON.stringify(data),
-            ...options
-        });
+    put: async (url, data, options = {}) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}${url}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${TokenManager.getToken()}`,
+                    ...options.headers
+                },
+                body: JSON.stringify(data),
+                ...options
+            });
+            
+            if (response.status === 401) {
+                console.error('Authentication failed');
+                TokenManager.removeToken();
+                window.location.href = '/';
+                throw new Error('Authentication failed');
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('API PUT Error:', error);
+            throw error;
+        }
     },
     
-    delete: (url, options = {}) => {
-        return fetch(`${API_BASE_URL}${url}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${TokenManager.getToken()}`,
-                ...options.headers
-            },
-            ...options
-        });
+    delete: async (url, options = {}) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}${url}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${TokenManager.getToken()}`,
+                    ...options.headers
+                },
+                ...options
+            });
+            
+            if (response.status === 401) {
+                console.error('Authentication failed');
+                TokenManager.removeToken();
+                window.location.href = '/';
+                throw new Error('Authentication failed');
+            }
+            
+            return response;
+        } catch (error) {
+            console.error('API DELETE Error:', error);
+            throw error;
+        }
     },
     
     ai: {
@@ -268,48 +330,72 @@ const apiClient = {
     }
 };
 
-// API Methods
+// API Methods with improved error handling
 const API = {
     auth: {
         login: async (credentials) => {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(credentials)
-            });
-            
-            if (!response.ok) {
-                throw new Error('Login failed');
+            try {
+                console.log('Attempting login with:', credentials.email);
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(credentials)
+                });
+                
+                console.log('Login response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Login failed:', errorText);
+                    throw new Error(errorText || 'Login failed');
+                }
+                
+                const data = await response.json();
+                console.log('Login successful, received token');
+                TokenManager.setToken(data.accessToken);
+                TokenManager.setUsername(credentials.email.split('@')[0]);
+                if (data.userId) {
+                    TokenManager.setUserId(data.userId);
+                }
+                return data;
+            } catch (error) {
+                console.error('Login error:', error);
+                throw error;
             }
-            
-            const data = await response.json();
-            TokenManager.setToken(data.accessToken);
-            TokenManager.setUsername(credentials.email.split('@')[0]);
-            return data;
         },
         
         signup: async (userData) => {
-            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(userData)
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Signup failed');
+            try {
+                console.log('Attempting signup with:', userData.email);
+                const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+                
+                console.log('Signup response status:', response.status);
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error('Signup failed:', error);
+                    throw new Error(error.message || 'Signup failed');
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Signup error:', error);
+                throw error;
             }
-            
-            return await response.json();
         },
         
         logout: () => {
             TokenManager.removeToken();
             TokenManager.removeUsername();
+            TokenManager.removeUserId();
             window.location.href = '/';
         }
     },
