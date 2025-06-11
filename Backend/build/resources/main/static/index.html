@@ -450,10 +450,13 @@
 			    <span class="close" onclick="closeModal('loginModal')">&times;</span>
 			    <h2>Log In</h2>
 			    <form onsubmit="handleLogin(event)">
-				  <input type="email" placeholder="Email" required><br><br>
-				  <input type="password" placeholder="Password" required><br><br>
-				  <button type="submit">Log In</button>
+				  <input type="email" name="email" placeholder="Email" required><br><br>
+				  <input type="password" name="password" placeholder="Password" required minlength="6"><br><br>
+				  <button type="submit" class="button primary">Log In</button>
 			    </form>
+			    <div style="margin-top: 1em;">
+			        <p style="font-size: 0.9em;">Demo Account: demo@studia.com / Demo1234!</p>
+			    </div>
 			  </div>
 		    </div>
 
@@ -463,11 +466,13 @@
 			    <span class="close" onclick="closeModal('signupModal')">&times;</span>
 			    <h2>Sign Up</h2>
 			    <form onsubmit="handleSignup(event)">
-				  <input type="text" placeholder="Name" required><br><br>
-			      <input type="email" placeholder="Email" required><br><br>
-				  <input type="password" placeholder="Password" required><br><br>
-				  <input type="text" placeholder="University" required><br><br>
-				  <input type="text" placeholder="Major (Optional)"><br><br>
+				  <input type="text" name="username" placeholder="Name" required minlength="2"><br><br>
+			      <input type="email" name="email" placeholder="Email" required><br><br>
+				  <input type="password" name="password" placeholder="Password (min 6 characters)" required minlength="6" 
+				         pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+				         title="Password must contain at least 8 characters, including uppercase, lowercase, number and special character"><br><br>
+				  <input type="text" name="university" placeholder="University" required><br><br>
+				  <input type="text" name="major" placeholder="Major (Optional)"><br><br>
 				  <select name="grade" style="width: 100%; margin-bottom: 1em;">
 				      <option value="">Select Grade (Optional)</option>
 				      <option value="1">1st Year</option>
@@ -476,7 +481,7 @@
 				      <option value="4">4th Year</option>
 				      <option value="5">Graduate</option>
 				  </select><br>
-				  <button type="submit">Sign Up</button>
+				  <button type="submit" class="button primary">Sign Up</button>
 			    </form>
 			  </div>
 		    </div>
@@ -549,12 +554,17 @@
 			      const email = form.querySelector('input[type="email"]').value;
 			      const password = form.querySelector('input[type="password"]').value;
 			      
+			      console.log('Attempting login with:', email);
+			      
 			      try {
 			          const response = await API.auth.login({ email, password });
+			          console.log('Login response:', response);
 			          alert('Login successful!');
 			          closeModal('loginModal');
-			          location.reload();
+			          // Redirect to summary page after successful login
+			          window.location.href = 'summary.html';
 			      } catch (error) {
+			          console.error('Login error:', error);
 			          alert('Login failed: ' + error.message);
 			      }
 			  }
@@ -563,24 +573,37 @@
 			  async function handleSignup(event) {
 			      event.preventDefault();
 			      const form = event.target;
-			      const name = form.querySelector('input[placeholder="Name"]').value;
+			      const username = form.querySelector('input[placeholder="Name"]').value;
 			      const email = form.querySelector('input[type="email"]').value;
 			      const password = form.querySelector('input[type="password"]').value;
 			      const university = form.querySelector('input[placeholder="University"]').value;
-			      const major = form.querySelector('input[placeholder="Major (Optional)"]').value;
+			      const major = form.querySelector('input[placeholder="Major (Optional)"]').value || '';
 			      const gradeSelect = form.querySelector('select[name="grade"]');
 			      const grade = gradeSelect.value ? parseInt(gradeSelect.value) : null;
 			      
+			      console.log('Attempting signup with:', { username, email, university });
+			      
 			      try {
-			          const signupData = { name, email, password, university };
+			          // Match the SignupRequest DTO structure
+			          const signupData = { 
+			              email, 
+			              password, 
+			              username,
+			              university
+			          };
+			          
 			          if (major) signupData.major = major;
 			          if (grade) signupData.grade = grade;
 			          
+			          console.log('Signup data:', signupData);
+			          
 			          const response = await API.auth.signup(signupData);
+			          console.log('Signup response:', response);
 			          alert('Signup successful! Please log in.');
 			          closeModal('signupModal');
 			          openModal('loginModal');
 			      } catch (error) {
+			          console.error('Signup error:', error);
 			          alert('Signup failed: ' + error.message);
 			      }
 			  }
