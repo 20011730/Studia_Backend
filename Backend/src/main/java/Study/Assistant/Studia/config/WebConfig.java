@@ -38,7 +38,8 @@ public class WebConfig implements WebMvcConfigurer {
         String[] expose = exposeHeaders.split(",");
         
         registry.addMapping("/**")
-                .allowedOrigins(origins)
+                //.allowedOrigins(origins)
+                .allowedOriginPatterns(origins)
                 .allowedMethods(methods)
                 .allowedHeaders(headers)
                 .exposedHeaders(expose)
