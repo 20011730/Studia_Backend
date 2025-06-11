@@ -137,14 +137,10 @@
 						$sidebar.addClass('inactive');
 
 					// Redirect to href.
-						setTimeout(function() {
-
-							if (target == '_blank')
-								window.open(href);
-							else
-								window.location.href = href;
-
-						}, 500);
+					if (target == '_blank')
+						window.open(href);
+					else
+						window.location.href = href;
 
 				});
 
