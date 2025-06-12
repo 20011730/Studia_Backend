@@ -1,3 +1,0 @@
-This is a test file for upload functionality.
-It contains sample text about machine learning and artificial intelligence.
-Machine learning is a subset of AI that enables systems to learn from data.
