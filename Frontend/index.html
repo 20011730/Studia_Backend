@@ -466,7 +466,7 @@
 			    <span class="close" onclick="closeModal('signupModal')">&times;</span>
 			    <h2>Sign Up</h2>
 			    <form onsubmit="handleSignup(event)">
-				  <input type="text" name="username" placeholder="Name" required minlength="2"><br><br>
+				  <input type="text" name="name" placeholder="Name" required minlength="2"><br><br>
 			      <input type="email" name="email" placeholder="Email" required><br><br>
 				  <input type="password" name="password" placeholder="Password (min 6 characters)" required minlength="6" 
 				         pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
@@ -492,6 +492,7 @@
 			<script src="js/breakpoints.min.js"></script>
 			<script src="js/util.js"></script>
 			<script src="js/main.js"></script>
+			<script src="js/modal-manager.js"></script>
 			<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
@@ -525,13 +526,24 @@
 			      const main = document.getElementById('main');
 			      const toggleBtn = document.querySelector('.menu-toggle-btn');
 			      
+			      // 디버깅용 로그
+			      console.log('Toggle sidebar - current state:', sidebar.classList.contains('inactive'));
+			      
+			      // 상태 토글
 			      sidebar.classList.toggle('inactive');
 			      
+			      // body 클래스도 함께 토글
 			      if (sidebar.classList.contains('inactive')) {
 			          document.body.classList.add('sidebar-inactive');
 			      } else {
 			          document.body.classList.remove('sidebar-inactive');
 			      }
+			      
+			      // 사이드바 상태 저장
+			      localStorage.setItem('sidebarState', sidebar.classList.contains('inactive') ? 'closed' : 'open');
+			      
+			      // 애니메이션 트리거를 위한 reflow 강제
+			      void sidebar.offsetWidth;
 			  }
 			  
 			  // 페이지 로드 시 인증 상태 확인 및 초기 설정
@@ -573,7 +585,7 @@
 			  async function handleSignup(event) {
 			      event.preventDefault();
 			      const form = event.target;
-			      const username = form.querySelector('input[placeholder="Name"]').value;
+			      const name = form.querySelector('input[placeholder="Name"]').value;
 			      const email = form.querySelector('input[type="email"]').value;
 			      const password = form.querySelector('input[type="password"]').value;
 			      const university = form.querySelector('input[placeholder="University"]').value;
@@ -581,14 +593,14 @@
 			      const gradeSelect = form.querySelector('select[name="grade"]');
 			      const grade = gradeSelect.value ? parseInt(gradeSelect.value) : null;
 			      
-			      console.log('Attempting signup with:', { username, email, university });
+			      console.log('Attempting signup with:', { name, email, university });
 			      
 			      try {
 			          // Match the SignupRequest DTO structure
 			          const signupData = { 
 			              email, 
 			              password, 
-			              username,
+			              name,
 			              university
 			          };
 			          
@@ -617,8 +629,21 @@
 			  document.addEventListener('DOMContentLoaded', function() {
 			      // Set initial sidebar state - start opened on main page
 			      const sidebar = document.getElementById('sidebar');
-			      sidebar.classList.remove('inactive');
-			      document.body.classList.remove('sidebar-inactive');
+			      const savedState = localStorage.getItem('sidebarState');
+			      
+			      // 메인 페이지는 기본적으로 열린 상태로 시작
+			      if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === '') {
+			          sidebar.classList.remove('inactive');
+			          document.body.classList.remove('sidebar-inactive');
+			      } else if (savedState === 'closed') {
+			          sidebar.classList.add('inactive');
+			          document.body.classList.add('sidebar-inactive');
+			      }
+			      
+			      // 사이드바 트랜지션 활성화
+			      setTimeout(() => {
+			          sidebar.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+			      }, 100);
 			      
 			      // Check authentication
 			      if (checkAuth()) {

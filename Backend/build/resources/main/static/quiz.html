@@ -558,7 +558,7 @@
 		<script src="js/breakpoints.min.js"></script>
 		<script src="js/util.js"></script>
 		<script src="js/main.js"></script>
-		<script src="assets/js/api.js"></script>
+		<script src="js/api.js"></script>
 		<script src="js/sidebar-toggle.js"></script>
 		<script src="js/dark-mode.js"></script>
 		<script src="js/sidebar-state.js"></script>
@@ -590,7 +590,18 @@
 			let previousAttempts = {};
 
 			// 페이지 로드 시
-			document.addEventListener('DOMContentLoaded', async function() {
+			window.addEventListener('load', async function() {
+				console.log('Page loaded, checking API...');
+				console.log('API object:', window.API);
+				console.log('API.quizzes:', window.API?.quizzes);
+				console.log('checkAuth:', window.checkAuth);
+				
+				if (!window.API || !window.checkAuth) {
+					console.error('API not loaded properly!');
+					alert('Failed to load API. Please refresh the page.');
+					return;
+				}
+				
 				// Set initial sidebar state - always start closed
 				const sidebar = document.getElementById('sidebar');
 				sidebar.classList.add('inactive');
@@ -624,6 +635,17 @@
 			async function loadQuizzes() {
 				try {
 					allQuizzes = await API.quizzes.list();
+					
+					// 각 퀴즈에 대한 이전 시도 기록 가져오기
+					try {
+						const history = await API.quiz.getHistory();
+						allQuizzes.forEach(quiz => {
+							previousAttempts[quiz.id] = history.filter(h => h.quizId === quiz.id);
+						});
+					} catch (e) {
+						console.log('Could not fetch quiz history');
+					}
+					
 					updateClassFilter();
 					filterAndDisplayQuizzes();
 				} catch (error) {
@@ -678,26 +700,38 @@
 					return;
 				}
 
-				container.innerHTML = filteredQuizzes.map(quiz => `
-					<div class="quiz-card">
-						<div class="quiz-card-header">
-							<h3 style="margin: 0; cursor: pointer;" onclick="startQuiz(${quiz.id})">${quiz.title || 'Quiz #' + quiz.id}</h3>
-							<button class="quiz-delete-btn" onclick="deleteQuiz(event, ${quiz.id})">
-								<i class="fas fa-trash"></i> Delete
-							</button>
-						</div>
-						<div style="cursor: pointer;" onclick="startQuiz(${quiz.id})">
-							<p>${quiz.material ? quiz.material.originalFileName : 'Unknown Material'}</p>
-							${quiz.material && quiz.material.className ? 
-								`<p style="margin: 5px 0;"><span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.9em;"><i class="fas fa-graduation-cap"></i> ${quiz.material.className}</span></p>` : ''
-							}
-							<div class="quiz-stats">
-								<span><i class="fas fa-question-circle"></i> ${quiz.questionCount || 0} questions</span>
-								<span><i class="fas fa-chart-line"></i> ${quiz.attempts || 0} attempts</span>
+				container.innerHTML = filteredQuizzes.map(quiz => {
+					const attempts = previousAttempts[quiz.id] || [];
+					const bestScore = attempts.length > 0 ? 
+						Math.max(...attempts.map(a => (a.score / a.totalQuestions) * 100)) : 0;
+					
+					return `
+						<div class="quiz-card">
+							<div class="quiz-card-header">
+								<h3 style="margin: 0; cursor: pointer;" onclick="startQuiz(${quiz.id})">${quiz.title || 'Quiz #' + quiz.id}</h3>
+								<button class="quiz-delete-btn" onclick="deleteQuiz(event, ${quiz.id})">
+									<i class="fas fa-trash"></i> Delete
+								</button>
+							</div>
+							<div style="cursor: pointer;" onclick="startQuiz(${quiz.id})">
+								<p>${quiz.material ? quiz.material.originalFileName : 'Unknown Material'}</p>
+								${quiz.material && quiz.material.className ? 
+									`<p style="margin: 5px 0;"><span style="background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 12px; font-size: 0.9em;"><i class="fas fa-graduation-cap"></i> ${quiz.material.className}</span></p>` : ''
+								}
+								<div class="quiz-stats">
+									<span><i class="fas fa-question-circle"></i> ${quiz.questionCount || 0} questions</span>
+									<span><i class="fas fa-chart-line"></i> ${attempts.length} attempts</span>
+									${bestScore > 0 ? `<span><i class="fas fa-trophy"></i> Best: ${Math.round(bestScore)}%</span>` : ''}
+								</div>
+								${attempts.length > 0 ? `
+									<button class="button small" style="margin-top: 10px;" onclick="viewPreviousAttempts(event, ${quiz.id})">
+										<i class="fas fa-history"></i> View History
+									</button>
+								` : ''}
 							</div>
 						</div>
-					</div>
-				`).join('');
+					`;
+				}).join('');
 			}
 			
 			// Add event listeners for filters
@@ -705,8 +739,10 @@
 			document.getElementById('difficultyFilter').addEventListener('change', filterAndDisplayQuizzes);
 
 			async function startQuiz(quizId) {
-				// 퀴즈 모드 선택 모달
+				// 고유 ID를 가진 모달 생성
+				const modalId = 'quiz-mode-modal-' + Date.now();
 				const modal = document.createElement('div');
+				modal.id = modalId;
 				modal.innerHTML = `
 					<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
 						<div style="background: white; padding: 30px; border-radius: 15px; max-width: 400px; width: 90%;">
@@ -728,8 +764,8 @@
 								</label>
 							</div>
 							<div style="display: flex; gap: 10px; justify-content: flex-end;">
-								<button onclick="this.closest('div').parentElement.remove()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer;">Cancel</button>
-								<button onclick="confirmStartQuiz(${quizId})" style="padding: 10px 20px; border: none; background: #667eea; color: white; border-radius: 5px; cursor: pointer;">Start Quiz</button>
+								<button onclick="document.getElementById('${modalId}').remove()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer;">Cancel</button>
+								<button onclick="confirmStartQuiz(${quizId}, '${modalId}')" style="padding: 10px 20px; border: none; background: #667eea; color: white; border-radius: 5px; cursor: pointer;">Start Quiz</button>
 							</div>
 						</div>
 					</div>
@@ -737,16 +773,66 @@
 				document.body.appendChild(modal);
 			}
 
-			async function confirmStartQuiz(quizId) {
+			async function confirmStartQuiz(quizId, modalId) {
 				const mode = document.querySelector('input[name="quizMode"]:checked').value;
 				timeLimitMode = mode === 'timed';
 				timeLimit = timeLimitMode ? 120 : 0; // 2 minutes per question
 				
-				// 모달 제거
-				document.querySelector('[style*="position: fixed"]').remove();
+				// 모달 제거 - ID를 사용하여 정확히 제거
+				const modal = document.getElementById(modalId);
+				if (modal) {
+					modal.remove();
+				}
+				
+				console.log('Starting quiz with ID:', quizId);
+				console.log('API.quizzes.get available:', typeof API.quizzes.get);
 				
 				try {
-					currentQuiz = await API.quizzes.get(quizId);
+					// 이전 시도 기록 가져오기
+					if (!previousAttempts[quizId]) {
+						try {
+							const history = await API.quiz.getHistory();
+							const attempts = history.filter(h => h.quizId === quizId);
+							previousAttempts[quizId] = attempts;
+						} catch (e) {
+							console.log('Could not fetch quiz history:', e);
+							previousAttempts[quizId] = [];
+						}
+					}
+					
+					console.log('Fetching quiz data...');
+					
+					// Direct API call with error handling
+					const response = await fetch(`${API_BASE_URL}/quizzes/${quizId}`, {
+						method: 'GET',
+						headers: {
+							'Authorization': `Bearer ${TokenManager.getToken()}`,
+							'Content-Type': 'application/json'
+						}
+					});
+					
+					console.log('API Response status:', response.status);
+					
+					if (!response.ok) {
+						const errorText = await response.text();
+						console.error('API Error response:', errorText);
+						throw new Error(`Failed to fetch quiz: ${response.status} ${response.statusText}`);
+					}
+					
+					currentQuiz = await response.json();
+					console.log('Quiz data loaded:', currentQuiz);
+					
+					if (!currentQuiz || !currentQuiz.questions || currentQuiz.questions.length === 0) {
+						throw new Error('Invalid quiz data or no questions found');
+					}
+					
+					// Ensure correctOption is a valid index
+					currentQuiz.questions.forEach(q => {
+						if (q.correctOption < 0 || q.correctOption >= q.options.length) {
+							console.warn('Invalid correctOption for question:', q.id, q.correctOption);
+						}
+					});
+					
 					currentQuestionIndex = 0;
 					userAnswers = {};
 					startTime = Date.now();
@@ -764,7 +850,12 @@
 					// Display first question
 					displayQuestion();
 				} catch (error) {
+					console.error('Failed to load quiz:', error);
 					alert('Failed to load quiz: ' + error.message);
+					
+					// Return to quiz list on error
+					document.getElementById('quizSelection').style.display = 'block';
+					document.getElementById('quizContainer').style.display = 'none';
 				}
 			}
 
@@ -949,6 +1040,47 @@
 
 			function backToQuizzes() {
 				window.location.reload();
+			}
+			
+			// 이전 시도 보기 함수
+			async function viewPreviousAttempts(event, quizId) {
+				event.stopPropagation();
+				
+				const attempts = previousAttempts[quizId] || [];
+				if (attempts.length === 0) {
+					alert('No previous attempts found.');
+					return;
+				}
+				
+				const modal = document.createElement('div');
+				modal.innerHTML = `
+					<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto;">
+						<div style="background: white; padding: 30px; border-radius: 15px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; margin: 20px;">
+							<h3 style="margin-top: 0; color: #2c3e50;">Quiz History</h3>
+							<div style="margin-bottom: 20px;">
+								${attempts.map((attempt, index) => `
+									<div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+										<h4 style="margin: 0 0 10px 0;">Attempt #${attempts.length - index}</h4>
+										<p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(attempt.attemptedAt).toLocaleString()}</p>
+										<p style="margin: 5px 0;"><strong>Score:</strong> ${attempt.score}/${attempt.totalQuestions} (${Math.round((attempt.score / attempt.totalQuestions) * 100)}%)</p>
+										<p style="margin: 5px 0;"><strong>Time:</strong> ${Math.floor(attempt.duration / 60)}m ${attempt.duration % 60}s</p>
+										<button class="button small" onclick="reviewAttempt(${quizId}, ${attempt.id})">
+											<i class="fas fa-eye"></i> Review Answers
+										</button>
+									</div>
+								`).join('')}
+							</div>
+							<button onclick="this.closest('div').parentElement.remove()" style="padding: 10px 20px; border: none; background: #667eea; color: white; border-radius: 5px; cursor: pointer;">Close</button>
+						</div>
+					</div>
+				`;
+				document.body.appendChild(modal);
+			}
+			
+			// 이전 시도 리뷰 함수
+			async function reviewAttempt(quizId, attemptId) {
+				// TODO: 서버에서 상세 시도 정보 가져오기
+				alert('Review feature coming soon!');
 			}
 		</script>
 	</body>

@@ -666,6 +666,7 @@
     <script src="js/sidebar-toggle.js"></script>
     <script src="js/dark-mode.js"></script>
     <script src="js/sidebar-state.js"></script>
+    <script src="js/modal-manager.js"></script>
     <script>
         // Toggle Sidebar Function
         function toggleSidebar() {
@@ -698,35 +699,106 @@
 
         // Initialize calendar
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Initializing Study Plan page...');
+            
             // Set initial sidebar state - always start closed
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.add('inactive');
-            document.body.classList.add('sidebar-inactive');
+            if (sidebar) {
+                sidebar.classList.add('inactive');
+                document.body.classList.add('sidebar-inactive');
+            }
             
-            await loadSchedules();
-            loadTodos();
-            initializeCalendar();
-            
-            // Update class filter options
-            window.updateClassFilter = function() {
-                const classFilter = document.getElementById('classFilterCalendar');
-                const classSelect = document.getElementById('classSelect');
-                const classes = [...new Set(schedules
-                    .filter(s => s.className)
-                    .map(s => s.className))];
+            try {
+                // Load schedules first
+                await loadSchedules();
+                console.log('Schedules loaded successfully');
                 
-                // Update calendar filter
-                classFilter.innerHTML = '<option value="">All Classes</option>' +
-                    classes.map(className => 
-                        `<option value="${className}">${className}</option>`
-                    ).join('');
+                // Initialize calendar
+                initializeCalendar();
+                console.log('Calendar initialized');
                 
-                // Update form select
-                classSelect.innerHTML = '<option value="">-- Select existing class --</option>' +
-                    classes.map(className => 
-                        `<option value="${className}">${className}</option>`
-                    ).join('') +
-                    '<option value="__new__">+ Add new class</option>';
+                // Load TODOs
+                loadTodos();
+                console.log('TODOs loaded');
+                
+                // Update class filter options - get classes from both schedules and materials
+                window.updateClassFilter = async function() {
+                    const classFilter = document.getElementById('classFilterCalendar');
+                    const classSelect = document.getElementById('classSelect');
+                    
+                    // 여러 소스에서 클래스 수집
+                    let allClasses = new Set();
+                    
+                    // 1. 스케줄에서 className 필드 수집
+                    schedules.forEach(s => {
+                        if (s.className && s.className.trim()) {
+                            allClasses.add(s.className);
+                        }
+                    });
+                    
+                    // 2. class 타입 스케줄의 title 수집
+                    schedules.forEach(s => {
+                        if (s.type === 'class' && s.title && s.title.trim()) {
+                            allClasses.add(s.title);
+                        }
+                    });
+                    
+                    // 3. Study Materials에서 클래스 수집
+                    try {
+                        const materials = await API.materials.list();
+                        materials.forEach(m => {
+                            if (m.className && m.className.trim()) {
+                                allClasses.add(m.className);
+                            }
+                        });
+                    } catch (error) {
+                        console.log('Could not fetch materials for class list:', error);
+                    }
+                    
+                    // 4. 로컬 스토리지에서 이전 클래스 목록 수집
+                    const savedClasses = localStorage.getItem('studiaClasses');
+                    if (savedClasses) {
+                        try {
+                            const classes = JSON.parse(savedClasses);
+                            classes.forEach(c => allClasses.add(c));
+                        } catch (e) {
+                            console.error('Error parsing saved classes:', e);
+                        }
+                    }
+                    
+                    // Set을 배열로 변환하고 정렬
+                    const classArray = Array.from(allClasses).sort();
+                    
+                    // 로컬 스토리지에 저장
+                    localStorage.setItem('studiaClasses', JSON.stringify(classArray));
+                    
+                    console.log('All available classes:', classArray);
+                    
+                    // 캘린더 필터 업데이트
+                    if (classFilter) {
+                        classFilter.innerHTML = '<option value="">All Classes</option>' +
+                            classArray.map(className => 
+                                `<option value="${className}">${className}</option>`
+                            ).join('') +
+                            '<option value="TODO List">TODO List</option>'; // TODO 필터 추가
+                    }
+                    
+                    // 폼 셀렉트 업데이트
+                    if (classSelect) {
+                        classSelect.innerHTML = '<option value="">-- Select existing class --</option>' +
+                            classArray.map(className => 
+                                `<option value="${className}">${className}</option>`
+                            ).join('') +
+                            '<option value="__new__">+ Add new class</option>';
+                    }
+                }
+                
+                // Initial update
+                updateClassFilter();
+                
+            } catch (error) {
+                console.error('Error during initialization:', error);
+                alert('Error loading study plan. Please refresh the page.');
             }
             
             // Handle class selection
@@ -756,9 +828,11 @@
                     
                     let filteredEvents = getCalendarEvents();
                     if (selectedClass) {
-                        filteredEvents = filteredEvents.filter(event => 
-                            event.extendedProps.className === selectedClass
-                        );
+                        filteredEvents = filteredEvents.filter(event => {
+                            // Check both className and if it's a TODO
+                            return event.extendedProps.className === selectedClass ||
+                                   (selectedClass === 'TODO List' && event.extendedProps.isTodo);
+                        });
                     }
                     
                     calendar.addEventSource(filteredEvents);
@@ -796,49 +870,109 @@
 
         function initializeCalendar() {
             const calendarEl = document.getElementById('calendar');
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-                },
-                editable: true,
-                droppable: true,
-                events: getCalendarEvents(),
-                eventClick: function(info) {
-                    showEventModal(info.event);
-                },
-                eventDrop: function(info) {
-                    updateEventDateTime(info.event);
-                },
-                eventResize: function(info) {
-                    updateEventDateTime(info.event);
-                },
-                height: 'auto',
-                views: {
-                    timeGridWeek: {
-                        allDaySlot: true
+            
+            if (!calendarEl) {
+                console.error('Calendar element not found!');
+                return;
+            }
+            
+            try {
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    timeZone: 'local', // 로컬 시간대 사용
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
                     },
-                    timeGridDay: {
-                        allDaySlot: true
+                    editable: true,
+                    droppable: true,
+                    events: getCalendarEvents(),
+                    eventClick: function(info) {
+                        showEventModal(info.event);
+                    },
+                    eventDrop: function(info) {
+                        updateEventDateTime(info.event);
+                    },
+                    eventResize: function(info) {
+                        updateEventDateTime(info.event);
+                    },
+                    height: 'auto',
+                    views: {
+                        timeGridWeek: {
+                            allDaySlot: true
+                        },
+                        timeGridDay: {
+                            allDaySlot: true
+                        }
+                    },
+                    allDayDefault: false, // 기본값을 false로 설정
+                    forceEventDuration: true, // 이벤트 기간 강제
+                    eventDidMount: function(info) {
+                        // Add tooltip or other event customizations
+                        console.log('Event mounted:', info.event.title);
                     }
-                }
-            });
-            calendar.render();
+                });
+                calendar.render();
+                console.log('Calendar rendered successfully');
+            } catch (error) {
+                console.error('Error initializing calendar:', error);
+                // Show user-friendly error message
+                calendarEl.innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: #f9f9f9; border-radius: 10px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3em; color: #f44336; margin-bottom: 20px;"></i>
+                        <h3>Calendar loading error</h3>
+                        <p>Please refresh the page or try again later.</p>
+                        <button class="button primary" onclick="location.reload()">Refresh Page</button>
+                    </div>
+                `;
+            }
         }
 
         function getCalendarEvents() {
-            return schedules.map(schedule => ({
-                id: schedule.id,
-                title: schedule.title,
-                start: schedule.allDay ? schedule.date : schedule.date + 'T' + schedule.startTime,
-                end: schedule.allDay ? null : schedule.date + 'T' + schedule.endTime,
-                allDay: schedule.allDay || false,
-                backgroundColor: schedule.color || (schedule.type === 'class' ? '#667eea' : schedule.type === 'exam' ? '#f56a6a' : '#4caf50'),
-                borderColor: schedule.color || (schedule.type === 'class' ? '#667eea' : schedule.type === 'exam' ? '#f56a6a' : '#4caf50'),
-                extendedProps: schedule
-            }));
+            const events = schedules.map(schedule => {
+                // Set default color based on type if not provided
+                let defaultColor = '#667eea'; // default
+                if (schedule.type === 'class') defaultColor = '#667eea';
+                else if (schedule.type === 'exam') defaultColor = '#f56a6a';
+                else if (schedule.type === 'study') defaultColor = '#4caf50';
+                
+                // Override with TODO colors if it's a TODO item
+                if (schedule.isTodo) {
+                    if (schedule.title.includes('TODO:')) {
+                        const todo = todos.find(t => schedule.id === 'todo-' + t.id);
+                        if (todo && todo.priority === 'high') defaultColor = '#f44336';
+                        else if (todo && todo.priority === 'medium') defaultColor = '#ff9800';
+                        else defaultColor = '#4caf50';
+                    }
+                }
+                
+                // All Day 이벤트 처리
+                let startDateTime, endDateTime;
+                if (schedule.allDay) {
+                    // All Day 이벤트는 날짜만 사용 (시간 정보 제외)
+                    startDateTime = schedule.date;
+                    endDateTime = null;
+                } else {
+                    // 시간이 있는 이벤트
+                    startDateTime = schedule.date + 'T' + schedule.startTime;
+                    endDateTime = schedule.date + 'T' + schedule.endTime;
+                }
+                
+                return {
+                    id: schedule.id,
+                    title: schedule.title,
+                    start: startDateTime,
+                    end: endDateTime,
+                    allDay: schedule.allDay || false,
+                    backgroundColor: schedule.color || defaultColor,
+                    borderColor: schedule.color || defaultColor,
+                    extendedProps: schedule
+                };
+            });
+            
+            console.log('Calendar events:', events);
+            return events;
         }
 
         function handleTypeChange() {
@@ -879,40 +1013,108 @@
 
         async function loadSchedules() {
             try {
+                console.log('Loading schedules from server...');
+                
+                // 이전 스케줄 개수 저장 (비교용)
+                const previousScheduleCount = schedules.length;
+                
                 // 백엔드에서 스케줄 불러오기
                 const serverSchedules = await API.studyPlans.getAll();
+                console.log('Loaded schedules:', serverSchedules);
                 
                 // 서버 데이터를 로컬 형식으로 변환
                 schedules = serverSchedules.map(plan => ({
                     id: plan.id.toString(),
-                    type: plan.type,
+                    type: plan.type || 'study',
                     title: plan.title,
                     date: plan.date,
-                    startTime: plan.startTime || '00:00',
-                    endTime: plan.endTime || '23:59',
-                    allDay: plan.allDay,
-                    color: plan.color,
-                    repeat: plan.repeat,
-                    repeatType: plan.repeatType,
-                    repeatUntil: plan.repeatUntil,
-                    repeatDays: plan.repeatDays,
-                    className: plan.className,
-                    description: plan.description
+                    startTime: plan.startTime ? plan.startTime.substring(0, 5) : '00:00', // HH:mm:ss -> HH:mm
+                    endTime: plan.endTime ? plan.endTime.substring(0, 5) : '23:59',     // HH:mm:ss -> HH:mm
+                    allDay: plan.allDay || false,
+                    color: plan.color || '#667eea',
+                    repeat: plan.repeat || false,
+                    repeatType: plan.repeatType || null,
+                    repeatUntil: plan.repeatUntil || null,
+                    repeatDays: plan.repeatDays || [],
+                    className: plan.className || null,
+                    description: plan.description || null
                 }));
                 
                 // 로컬 스토리지와 동기화 (백업용)
                 localStorage.setItem('studiaSchedules', JSON.stringify(schedules));
                 
                 // 클래스 필터 업데이트
-                updateClassFilter();
+                if (window.updateClassFilter) {
+                    await updateClassFilter();
+                }
+                
+                // 캘린더 업데이트 - 이벤트 소스 완전히 재설정
+                if (calendar) {
+                    // 모든 이벤트 제거
+                    calendar.removeAllEvents();
+                    
+                    // 새 이벤트 추가
+                    const events = getCalendarEvents();
+                    events.forEach(event => {
+                        calendar.addEvent(event);
+                    });
+                    
+                    // 새로운 일정이 추가되었으면 알림
+                    if (schedules.length > previousScheduleCount) {
+                        const newCount = schedules.length - previousScheduleCount;
+                        if (window.showNotification) {
+                            showNotification(`${newCount} new schedule(s) added to calendar!`, 'success');
+                        }
+                    }
+                    
+                    // 캘린더 리렌더링
+                    calendar.render();
+                }
                 
             } catch (error) {
                 console.error('Failed to load schedules from server:', error);
+                console.log('Loading from local storage as fallback...');
                 // 서버 연결 실패시 로컬 스토리지에서 불러오기
                 const saved = localStorage.getItem('studiaSchedules');
                 if (saved) {
                     schedules = JSON.parse(saved);
+                    console.log('Loaded from local storage:', schedules);
+                } else {
+                    schedules = [];
+                    console.log('No schedules found in local storage');
                 }
+                
+                // 클래스 필터 업데이트
+                if (window.updateClassFilter) {
+                    await updateClassFilter();
+                }
+                
+                // 캘린더 업데이트
+                if (calendar) {
+                    calendar.removeAllEvents();
+                    const events = getCalendarEvents();
+                    events.forEach(event => {
+                        calendar.addEvent(event);
+                    });
+                }
+            }
+        }
+        
+        // 실시간 동기화를 위한 주기적 새로고침 (선택사항)
+        let syncInterval;
+        
+        function startAutoSync() {
+            // 5분마다 서버와 동기화
+            syncInterval = setInterval(async () => {
+                console.log('Auto-syncing schedules...');
+                await loadSchedules();
+            }, 5 * 60 * 1000); // 5분
+        }
+        
+        function stopAutoSync() {
+            if (syncInterval) {
+                clearInterval(syncInterval);
+                syncInterval = null;
             }
         }
 
@@ -949,16 +1151,26 @@
             e.preventDefault();
             
             const formData = new FormData(this);
+            const type = formData.get('type');
+            const classNameInput = formData.get('className');
+            
+            // class 타입일 때 className 처리
+            let className = classNameInput;
+            if (type === 'class' && !className) {
+                className = formData.get('title');
+            }
+            
             const schedule = {
                 id: editingEventId || Date.now().toString(),
-                type: formData.get('type'),
+                type: type,
                 title: formData.get('title'),
                 date: formData.get('date'),
                 startTime: formData.get('startTime') || '00:00',
                 endTime: formData.get('endTime') || '23:59',
                 allDay: formData.get('allDay') === 'on',
                 color: formData.get('color'),
-                repeat: formData.get('repeat') === 'on'
+                repeat: formData.get('repeat') === 'on',
+                className: className
             };
 
             // 서버에 저장할 데이터 준비
@@ -966,12 +1178,12 @@
                 title: schedule.title,
                 type: schedule.type,
                 date: schedule.date,
-                startTime: schedule.allDay ? null : schedule.startTime,
-                endTime: schedule.allDay ? null : schedule.endTime,
+                startTime: schedule.allDay ? null : schedule.startTime + ':00', // HH:mm:ss 형식
+                endTime: schedule.allDay ? null : schedule.endTime + ':00',     // HH:mm:ss 형식
                 allDay: schedule.allDay,
                 color: schedule.color,
                 repeat: schedule.repeat,
-                className: formData.get('className') || null,
+                className: schedule.className,
                 description: formData.get('description') || null
             };
 
@@ -987,37 +1199,82 @@
             try {
                 console.log('Saving schedule:', editingEventId ? 'Update' : 'Create', planRequest);
                 
+                let savedSchedule;
                 if (editingEventId) {
-                    // 기존 일정 업데이트
-                    const response = await API.studyPlans.update(editingEventId, planRequest);
-                    console.log('Update response:', response);
+                    savedSchedule = await API.studyPlans.update(editingEventId, planRequest);
+                    console.log('Update response:', savedSchedule);
                 } else {
-                    // 새 일정 생성
-                    const response = await API.studyPlans.create(planRequest);
-                    console.log('Create response:', response);
-                    if (response && response.id) {
-                        schedule.id = response.id.toString();
-                    }
+                    savedSchedule = await API.studyPlans.create(planRequest);
+                    console.log('Create response:', savedSchedule);
                 }
                 
-                // 성공 시 로컬 업데이트 및 캘린더 새로고침
+                // 성공 알림
+                showNotification('Schedule added successfully!', 'success');
+                
+                // 폼 초기화
+                this.reset();
+                editingEventId = null;
+                document.getElementById('repeatOptions').style.display = 'none';
+                document.getElementById('allDayContainer').style.display = 'none';
+                document.getElementById('timeInputs').style.display = 'grid';
+                
+                // 스케줄 새로고침 및 캘린더 업데이트
                 await loadSchedules();
-                console.log('Schedule saved successfully');
+                
+                // 캘린더가 표시되어 있으면 자동으로 보여주기
+                if (calendar && savedSchedule) {
+                    // 추가된 일정으로 스크롤
+                    calendar.gotoDate(savedSchedule.date);
+                }
                 
             } catch (error) {
                 console.error('Failed to save schedule:', error);
                 console.error('Error details:', error.response || error.message);
-                alert('일정 저장에 실패했습니다. 다시 시도해주세요.\n\n오류: ' + (error.message || 'Unknown error'));
-                return;
+                showNotification('Failed to save schedule: ' + (error.message || 'Unknown error'), 'error');
             }
-
-            // 폼 초기화
-            this.reset();
-            editingEventId = null;
-            document.getElementById('repeatOptions').style.display = 'none';
-            document.getElementById('allDayContainer').style.display = 'none';
-            document.getElementById('timeInputs').style.display = 'grid';
         });
+        
+        // 알림 표시 함수
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                background: ${type === 'success' ? '#4caf50' : '#f44336'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            // Add animation styles if not exists
+            if (!document.getElementById('notification-styles')) {
+                const style = document.createElement('style');
+                style.id = 'notification-styles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
 
         function generateRecurringEvents(baseSchedule) {
             const startDate = new Date(baseSchedule.date);
@@ -1252,23 +1509,46 @@
             const schedule = schedules.find(s => s.id === event.id);
             if (!schedule) return;
             
-            const newDate = event.start.toISOString().split('T')[0];
-            const newStartTime = event.start.toTimeString().substr(0, 5);
-            const newEndTime = event.end ? event.end.toTimeString().substr(0, 5) : schedule.endTime;
+            console.log('Updating event:', {
+                eventId: event.id,
+                originalDate: schedule.date,
+                eventStart: event.start,
+                allDay: schedule.allDay
+            });
+            
+            // All Day 이벤트의 경우 로컬 날짜 사용
+            let newDate;
+            if (schedule.allDay || event.allDay) {
+                // All Day 이벤트는 로컬 날짜 형식으로 처리
+                const year = event.start.getFullYear();
+                const month = String(event.start.getMonth() + 1).padStart(2, '0');
+                const day = String(event.start.getDate()).padStart(2, '0');
+                newDate = `${year}-${month}-${day}`;
+                console.log('All Day event - using local date:', newDate);
+            } else {
+                // 시간이 있는 이벤트는 기존 방식 유지
+                newDate = event.start.toISOString().split('T')[0];
+                console.log('Timed event - using ISO date:', newDate);
+            }
+            
+            const newStartTime = event.allDay ? schedule.startTime : event.start.toTimeString().substr(0, 5);
+            const newEndTime = event.allDay ? schedule.endTime : (event.end ? event.end.toTimeString().substr(0, 5) : schedule.endTime);
             
             // 서버에 업데이트 요청
             const updateRequest = {
                 title: schedule.title,
                 type: schedule.type,
                 date: newDate,
-                startTime: schedule.allDay ? null : newStartTime,
-                endTime: schedule.allDay ? null : newEndTime,
+                startTime: schedule.allDay ? null : newStartTime + ':00',
+                endTime: schedule.allDay ? null : newEndTime + ':00',
                 allDay: schedule.allDay,
                 color: schedule.color,
                 repeat: false, // 드래그한 일정은 반복 해제
                 className: schedule.className,
                 description: schedule.description
             };
+            
+            console.log('Update request:', updateRequest);
             
             try {
                 await API.studyPlans.update(event.id, updateRequest);
@@ -1279,6 +1559,7 @@
                 schedule.endTime = newEndTime;
                 
                 saveSchedules();
+                showNotification('일정이 이동되었습니다.', 'success');
             } catch (error) {
                 console.error('Failed to update event:', error);
                 alert('일정 업데이트에 실패했습니다.');
@@ -1436,11 +1717,54 @@
         
         // TODO Functions
         function loadTodos() {
+            console.log('Loading TODOs...');
             const saved = localStorage.getItem('studiaTodos');
             if (saved) {
-                todos = JSON.parse(saved);
-                renderTodos();
+                try {
+                    todos = JSON.parse(saved);
+                    console.log('Loaded TODOs:', todos);
+                    
+                    // Sync TODO calendar events
+                    todos.forEach(todo => {
+                        if (todo.dueDate) {
+                            // Check if this TODO is already in schedules
+                            const todoScheduleId = 'todo-' + todo.id;
+                            const existingSchedule = schedules.find(s => s.id === todoScheduleId);
+                            
+                            if (!existingSchedule) {
+                                // Add to schedules if not exists
+                                const schedule = {
+                                    id: todoScheduleId,
+                                    type: 'study',
+                                    title: 'TODO: ' + todo.text,
+                                    date: todo.dueDate,
+                                    startTime: todo.dueTime || '09:00',
+                                    endTime: todo.dueTime ? 
+                                        (parseInt(todo.dueTime.split(':')[0]) + 1).toString().padStart(2, '0') + ':00' : 
+                                        '10:00',
+                                    allDay: !todo.dueTime,
+                                    color: todo.priority === 'high' ? '#f44336' : 
+                                           todo.priority === 'medium' ? '#ff9800' : '#4caf50',
+                                    className: 'TODO List',
+                                    isTodo: true
+                                };
+                                schedules.push(schedule);
+                            }
+                        }
+                    });
+                    
+                    // Save updated schedules
+                    saveSchedules();
+                    
+                } catch (error) {
+                    console.error('Error parsing TODOs:', error);
+                    todos = [];
+                }
+            } else {
+                todos = [];
+                console.log('No TODOs found, starting fresh');
             }
+            renderTodos();
         }
         
         function saveTodos() {
@@ -1450,49 +1774,73 @@
         function renderTodos() {
             const todoList = document.getElementById('todoList');
             
-            if (todos.length === 0) {
-                todoList.innerHTML = '<p style="text-align: center; color: #999;">No tasks yet. Add your first study task!</p>';
+            if (!todoList) {
+                console.error('TODO list element not found!');
                 return;
             }
             
-            // Sort todos by completion status, priority, and date
-            const sortedTodos = [...todos].sort((a, b) => {
-                if (a.completed !== b.completed) {
-                    return a.completed ? 1 : -1;
-                }
-                // Priority order: high > medium > low > null
-                const priorityOrder = { high: 3, medium: 2, low: 1, null: 0 };
-                const aPriority = priorityOrder[a.priority] || 0;
-                const bPriority = priorityOrder[b.priority] || 0;
-                if (aPriority !== bPriority) {
-                    return bPriority - aPriority;
-                }
-                return new Date(b.createdAt) - new Date(a.createdAt);
-            });
+            if (!todos || todos.length === 0) {
+                todoList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No tasks yet. Add your first study task!</p>';
+                return;
+            }
             
-            todoList.innerHTML = sortedTodos.map(todo => `
-                <div class="todo-item" data-id="${todo.id}">
-                    <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} 
-                           onchange="toggleTodo('${todo.id}')">
-                    <div style="flex: 1;">
-                        <div class="todo-text ${todo.completed ? 'completed' : ''}">${todo.text}</div>
-                        <div style="display: flex; gap: 15px; margin-top: 5px; font-size: 0.85em; color: #666;">
-                            ${todo.dueDate ? `<span><i class="fas fa-calendar"></i> ${new Date(todo.dueDate).toLocaleDateString()}</span>` : ''}
-                            ${todo.dueTime ? `<span><i class="fas fa-clock"></i> ${todo.dueTime}</span>` : ''}
-                            ${todo.notes ? `<span><i class="fas fa-sticky-note"></i> Notes</span>` : ''}
+            try {
+                // Sort todos by completion status, priority, and date
+                const sortedTodos = [...todos].sort((a, b) => {
+                    if (a.completed !== b.completed) {
+                        return a.completed ? 1 : -1;
+                    }
+                    // Priority order: high > medium > low > null
+                    const priorityOrder = { high: 3, medium: 2, low: 1, null: 0 };
+                    const aPriority = priorityOrder[a.priority] || 0;
+                    const bPriority = priorityOrder[b.priority] || 0;
+                    if (aPriority !== bPriority) {
+                        return bPriority - aPriority;
+                    }
+                    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                });
+                
+                todoList.innerHTML = sortedTodos.map(todo => `
+                    <div class="todo-item" data-id="${todo.id}">
+                        <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} 
+                               onchange="toggleTodo('${todo.id}')">
+                        <div style="flex: 1;">
+                            <div class="todo-text ${todo.completed ? 'completed' : ''}">${escapeHtml(todo.text)}</div>
+                            <div style="display: flex; gap: 15px; margin-top: 5px; font-size: 0.85em; color: #666;">
+                                ${todo.dueDate ? `<span><i class="fas fa-calendar"></i> ${new Date(todo.dueDate).toLocaleDateString()}</span>` : ''}
+                                ${todo.dueTime ? `<span><i class="fas fa-clock"></i> ${todo.dueTime}</span>` : ''}
+                                ${todo.notes ? `<span><i class="fas fa-sticky-note"></i> Notes</span>` : ''}
+                            </div>
+                        </div>
+                        ${todo.priority ? `<span class="todo-priority priority-${todo.priority}">${todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</span>` : ''}
+                        <div class="todo-actions">
+                            <button class="todo-edit-btn" onclick="editTodo('${todo.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="todo-delete-btn" onclick="deleteTodo('${todo.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </div>
-                    ${todo.priority ? `<span class="todo-priority priority-${todo.priority}">${todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</span>` : ''}
-                    <div class="todo-actions">
-                        <button class="todo-edit-btn" onclick="editTodo('${todo.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="todo-delete-btn" onclick="deleteTodo('${todo.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `).join('');
+                
+                console.log('TODOs rendered successfully');
+            } catch (error) {
+                console.error('Error rendering TODOs:', error);
+                todoList.innerHTML = '<p style="text-align: center; color: #f44336; padding: 20px;">Error displaying tasks. Please refresh the page.</p>';
+            }
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
         
         function addTodo() {
@@ -1584,10 +1932,36 @@
                 window.currentTodoModal = null;
             }
             
-            // Optional: Add to calendar as a task
-            if (dueDate && confirm('Would you like to add this task to your calendar?')) {
+            // Automatically add to calendar if due date is set
+            if (dueDate) {
                 addTodoToCalendar(todo);
+                showNotification('Task added to calendar!');
             }
+        }
+        
+        // Notification function for TODO
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                background: ${type === 'success' ? '#4caf50' : '#f44336'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
         
         function toggleTodo(id) {
@@ -1622,20 +1996,74 @@
         }
         
         function addTodoToCalendar(todo) {
-            const today = new Date().toISOString().split('T')[0];
-            const schedule = {
-                id: 'todo-' + todo.id,
-                type: 'study',
-                title: 'TODO: ' + todo.text,
-                date: today,
-                startTime: '09:00',
-                endTime: '10:00',
-                allDay: false,
-                color: '#4caf50'
-            };
+            const dueDate = todo.dueDate || new Date().toISOString().split('T')[0];
+            const todoScheduleId = 'todo-' + todo.id;
             
-            schedules.push(schedule);
+            // 중복 체크 추가
+            const existingIndex = schedules.findIndex(s => s.id === todoScheduleId);
+            if (existingIndex !== -1) {
+                // 기존 일정 업데이트
+                schedules[existingIndex] = {
+                    id: todoScheduleId,
+                    type: 'study',
+                    title: 'TODO: ' + todo.text,
+                    date: dueDate,
+                    startTime: todo.dueTime || '09:00',
+                    endTime: todo.dueTime ? 
+                        (parseInt(todo.dueTime.split(':')[0]) + 1).toString().padStart(2, '0') + ':00' : 
+                        '10:00',
+                    allDay: !todo.dueTime,
+                    color: todo.priority === 'high' ? '#f44336' : 
+                           todo.priority === 'medium' ? '#ff9800' : '#4caf50',
+                    className: 'TODO List',
+                    isTodo: true
+                };
+            } else {
+                // 새 일정 추가
+                const schedule = {
+                    id: todoScheduleId,
+                    type: 'study',
+                    title: 'TODO: ' + todo.text,
+                    date: dueDate,
+                    startTime: todo.dueTime || '09:00',
+                    endTime: todo.dueTime ? 
+                        (parseInt(todo.dueTime.split(':')[0]) + 1).toString().padStart(2, '0') + ':00' : 
+                        '10:00',
+                    allDay: !todo.dueTime,
+                    color: todo.priority === 'high' ? '#f44336' : 
+                           todo.priority === 'medium' ? '#ff9800' : '#4caf50',
+                    className: 'TODO List',
+                    isTodo: true
+                };
+                schedules.push(schedule);
+            }
+            
+            // 로컬 스케줄에 추가
             saveSchedules();
+            
+            // 캘린더에 즉시 반영
+            if (calendar) {
+                // 기존 TODO 이벤트 제거
+                const existingEvent = calendar.getEventById(todoScheduleId);
+                if (existingEvent) {
+                    existingEvent.remove();
+                }
+                
+                // 새 이벤트 추가
+                const newSchedule = schedules.find(s => s.id === todoScheduleId);
+                if (newSchedule) {
+                    calendar.addEvent({
+                        id: newSchedule.id,
+                        title: newSchedule.title,
+                        start: newSchedule.allDay ? newSchedule.date : newSchedule.date + 'T' + newSchedule.startTime,
+                        end: newSchedule.allDay ? null : newSchedule.date + 'T' + newSchedule.endTime,
+                        allDay: newSchedule.allDay,
+                        backgroundColor: newSchedule.color,
+                        borderColor: newSchedule.color,
+                        extendedProps: newSchedule
+                    });
+                }
+            }
         }
         
         // Add Enter key support for TODO input

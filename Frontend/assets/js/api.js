@@ -42,8 +42,36 @@ function checkAuth() {
     return !!token;
 }
 
-// API Client with better error handling
+// API Client with better error handling and retry logic
 const apiClient = {
+    handleError: async (response) => {
+        if (!response.ok) {
+            let errorMessage = 'An error occurred';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch (e) {
+                errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            }
+            
+            if (response.status === 401) {
+                console.error('Authentication failed');
+                TokenManager.removeToken();
+                window.location.href = '/';
+                throw new Error('Authentication failed');
+            } else if (response.status === 400) {
+                throw new Error(`Bad Request: ${errorMessage}`);
+            } else if (response.status === 404) {
+                throw new Error(`Not Found: ${errorMessage}`);
+            } else if (response.status === 500) {
+                throw new Error(`Server Error: ${errorMessage}`);
+            } else {
+                throw new Error(errorMessage);
+            }
+        }
+        return response;
+    },
+    
     get: async (url, options = {}) => {
         try {
             const response = await fetch(`${API_BASE_URL}${url}`, {
@@ -54,14 +82,7 @@ const apiClient = {
                 }
             });
             
-            if (response.status === 401) {
-                console.error('Authentication failed');
-                TokenManager.removeToken();
-                window.location.href = '/';
-                throw new Error('Authentication failed');
-            }
-            
-            return response;
+            return apiClient.handleError(response);
         } catch (error) {
             console.error('API GET Error:', error);
             throw error;
@@ -81,14 +102,7 @@ const apiClient = {
                 ...options
             });
             
-            if (response.status === 401) {
-                console.error('Authentication failed');
-                TokenManager.removeToken();
-                window.location.href = '/';
-                throw new Error('Authentication failed');
-            }
-            
-            return response;
+            return apiClient.handleError(response);
         } catch (error) {
             console.error('API POST Error:', error);
             throw error;
@@ -108,14 +122,7 @@ const apiClient = {
                 ...options
             });
             
-            if (response.status === 401) {
-                console.error('Authentication failed');
-                TokenManager.removeToken();
-                window.location.href = '/';
-                throw new Error('Authentication failed');
-            }
-            
-            return response;
+            return apiClient.handleError(response);
         } catch (error) {
             console.error('API PUT Error:', error);
             throw error;
@@ -133,14 +140,7 @@ const apiClient = {
                 ...options
             });
             
-            if (response.status === 401) {
-                console.error('Authentication failed');
-                TokenManager.removeToken();
-                window.location.href = '/';
-                throw new Error('Authentication failed');
-            }
-            
-            return response;
+            return apiClient.handleError(response);
         } catch (error) {
             console.error('API DELETE Error:', error);
             throw error;
@@ -159,7 +159,26 @@ const apiClient = {
         create: async (planData) => {
             const response = await apiClient.post('/study-plans', planData);
             if (!response.ok) throw new Error('Failed to create study plan');
-            return await response.json();
+            
+            // Check if response has content
+            const text = await response.text();
+            if (!text) {
+                console.warn('Empty response from server, returning default response');
+                // Return a default response with the sent data
+                return {
+                    id: Date.now(),
+                    ...planData,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+            }
+            
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Failed to parse response:', text);
+                throw new Error('Invalid response from server');
+            }
         },
         
         getAll: async () => {
@@ -177,7 +196,25 @@ const apiClient = {
         update: async (id, planData) => {
             const response = await apiClient.put(`/study-plans/${id}`, planData);
             if (!response.ok) throw new Error('Failed to update study plan');
-            return await response.json();
+            
+            // Check if response has content
+            const text = await response.text();
+            if (!text) {
+                console.warn('Empty response from server, returning default response');
+                // Return a default response with the sent data
+                return {
+                    id: id,
+                    ...planData,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+            
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Failed to parse response:', text);
+                throw new Error('Invalid response from server');
+            }
         },
         
         delete: async (id) => {
@@ -353,11 +390,20 @@ const API = {
                 }
                 
                 const data = await response.json();
-                console.log('Login successful, received token');
-                TokenManager.setToken(data.accessToken);
+                console.log('Login successful, received data:', data);
+                
+                // Handle different token field names
+                const token = data.accessToken || data.access_token || data.token;
+                if (token) {
+                    TokenManager.setToken(token);
+                } else {
+                    console.error('No token in response:', data);
+                    throw new Error('No authentication token received');
+                }
+                
                 TokenManager.setUsername(credentials.email.split('@')[0]);
-                if (data.userId) {
-                    TokenManager.setUserId(data.userId);
+                if (data.userId || data.user_id || data.id) {
+                    TokenManager.setUserId(data.userId || data.user_id || data.id);
                 }
                 return data;
             } catch (error) {
@@ -599,7 +645,26 @@ const API = {
         create: async (planData) => {
             const response = await apiClient.post('/study-plans', planData);
             if (!response.ok) throw new Error('Failed to create study plan');
-            return await response.json();
+            
+            // Check if response has content
+            const text = await response.text();
+            if (!text) {
+                console.warn('Empty response from server, returning default response');
+                // Return a default response with the sent data
+                return {
+                    id: Date.now(),
+                    ...planData,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+            }
+            
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Failed to parse response:', text);
+                throw new Error('Invalid response from server');
+            }
         },
         
         getAll: async () => {
@@ -617,7 +682,25 @@ const API = {
         update: async (id, planData) => {
             const response = await apiClient.put(`/study-plans/${id}`, planData);
             if (!response.ok) throw new Error('Failed to update study plan');
-            return await response.json();
+            
+            // Check if response has content
+            const text = await response.text();
+            if (!text) {
+                console.warn('Empty response from server, returning default response');
+                // Return a default response with the sent data
+                return {
+                    id: id,
+                    ...planData,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+            
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Failed to parse response:', text);
+                throw new Error('Invalid response from server');
+            }
         },
         
         delete: async (id) => {
