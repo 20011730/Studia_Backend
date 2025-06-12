@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Test</title>
+    <meta charset="utf-8" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px 0;
+            background: #f9f9f9;
+        }
+        .upload-area:hover {
+            background: #f0f0f0;
+        }
+        .upload-area.dragover {
+            background: #e0e0e0;
+            border-color: #666;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload Test Page</h1>
+    
+    <div>
+        <button onclick="checkAPI()">Check API</button>
+        <button onclick="checkAuth()">Check Auth</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div class="upload-area" id="uploadArea">
+        <h3>Drop files here or click to browse</h3>
+        <p>Supported formats: PDF, DOCX, PPTX, TXT</p>
+        <input type="file" id="fileInput" style="display: none;" accept=".pdf,.docx,.pptx,.txt" multiple />
+    </div>
+    
+    <div>
+        <label>Class Name: <input type="text" id="className" value="Test Class" /></label>
+    </div>
+    
+    <h3>Console Log:</h3>
+    <div id="log" class="log"></div>
+    
+    <script src="js/api.js"></script>
+    <script>
+        const logDiv = document.getElementById('log');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+        }
+        
+        function checkAPI() {
+            log('Checking API...');
+            log('window.API: ' + (window.API ? 'Available' : 'Not found'));
+            log('window.apiClient: ' + (window.apiClient ? 'Available' : 'Not found'));
+            log('window.checkAuth: ' + (window.checkAuth ? 'Available' : 'Not found'));
+            log('API_BASE_URL: ' + (window.API_BASE_URL || 'Not found'));
+            
+            if (window.API && window.API.materials) {
+                log('API.materials.upload: ' + (window.API.materials.upload ? 'Available' : 'Not found'));
+                log('API.materials.list: ' + (window.API.materials.list ? 'Available' : 'Not found'));
+            }
+        }
+        
+        function checkAuthStatus() {
+            if (!window.checkAuth) {
+                log('checkAuth function not found!', 'error');
+                return false;
+            }
+            
+            const isAuth = window.checkAuth();
+            log('Authentication status: ' + (isAuth ? 'Authenticated' : 'Not authenticated'));
+            
+            if (isAuth) {
+                log('Token: ' + (TokenManager.getToken() ? 'Present' : 'Missing'));
+                log('Username: ' + (TokenManager.getUsername() || 'Not set'));
+            }
+            
+            return isAuth;
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', function() {
+            log('Page loaded');
+            checkAPI();
+            
+            if (!checkAuthStatus()) {
+                log('Not authenticated. Please login first.', 'error');
+                return;
+            }
+            
+            setupUploadArea();
+        });
+        
+        function setupUploadArea() {
+            log('Setting up upload area...');
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            uploadArea.addEventListener('click', () => {
+                log('Upload area clicked');
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                log('File input changed');
+                const files = Array.from(e.target.files);
+                log(`Selected ${files.length} file(s)`);
+                if (files.length > 0) {
+                    uploadFiles(files);
+                }
+            });
+            
+            // Drag and drop
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                log('Files dropped');
+                const files = Array.from(e.dataTransfer.files);
+                log(`Dropped ${files.length} file(s)`);
+                if (files.length > 0) {
+                    uploadFiles(files);
+                }
+            });
+            
+            log('Upload area setup complete', 'success');
+        }
+        
+        async function uploadFiles(files) {
+            const className = document.getElementById('className').value;
+            
+            if (!className) {
+                log('Class name is required!', 'error');
+                return;
+            }
+            
+            log(`Starting upload of ${files.length} file(s) for class: ${className}`);
+            
+            for (const file of files) {
+                log(`\nUploading: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+                
+                try {
+                    // Validate file
+                    if (file.size > 100 * 1024 * 1024) {
+                        log(`File too large: ${file.name}`, 'error');
+                        continue;
+                    }
+                    
+                    const allowedTypes = ['.pdf', '.docx', '.pptx', '.txt'];
+                    const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                    if (!allowedTypes.includes(fileExtension)) {
+                        log(`Unsupported format: ${file.name}`, 'error');
+                        continue;
+                    }
+                    
+                    const title = file.name.replace(/\.[^/.]+$/, '');
+                    
+                    log(`Calling API.materials.upload...`);
+                    const response = await API.materials.upload(file, title, className);
+                    log(`Upload successful: ${JSON.stringify(response)}`, 'success');
+                    
+                } catch (error) {
+                    log(`Upload failed: ${error.message}`, 'error');
+                    log(`Error details: ${error.stack}`, 'error');
+                }
+            }
+            
+            log('\nAll uploads completed');
+            fileInput.value = '';
+        }
+    </script>
+</body>
+</html>

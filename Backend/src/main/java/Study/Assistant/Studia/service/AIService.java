@@ -125,11 +125,11 @@ public class AIService {
             다음 내용에서 시험에 나올 가능성이 높은 핵심 포인트를 추출해주세요.
             
             추출 기준:
-            1. 정의나 개념 설명 (시험의 30-40%)
-            2. 중요한 공식이나 원리 (시험의 20-30%)
-            3. 인과관계나 프로세스 (시험의 20%)
-            4. 비교/대조되는 내용 (시험의 15%)
-            5. 실제 적용 예시와 문제 해결 (시험의 15%)
+            1. 정의나 개념 설명 (시험의 30-40%%)
+            2. 중요한 공식이나 원리 (시험의 20-30%%)
+            3. 인과관계나 프로세스 (시험의 20%%)
+            4. 비교/대조되는 내용 (시험의 15%%)
+            5. 실제 적용 예시와 문제 해결 (시험의 15%%)
             
             각 포인트는 다음 형식으로 작성:
             - 🔑 **[핵심 개념]**: 간결하고 명확한 설명 (예: **스택(Stack)**: LIFO 구조의 자료구조로, push/pop 연산을 통해 데이터를 관리)
@@ -152,6 +152,9 @@ public class AIService {
     }
     
     public List<Map<String, Object>> generateQuizzes(String content, int count, String difficulty) {
+        log.info("=== Starting quiz generation ===");
+        log.info("Count: {}, Difficulty: {}, Content length: {} chars", count, difficulty, content.length());
+        
         String prompt = """
             당신은 대학 교수로서 고품질의 평가 문제를 만드는 전문가입니다.
             다음 학습 내용을 바탕으로 %d개의 객관식 문제를 만들어주세요.
@@ -210,8 +213,12 @@ public class AIService {
             %s
             """.formatted(count, difficulty, difficulty, content);
         
+        log.info("Calling AI to generate quiz questions...");
         String response = callAI(prompt, "quiz-generation");
-        return parseQuizResponse(response);
+        log.info("AI response received, parsing quiz data...");
+        List<Map<String, Object>> quizzes = parseQuizResponse(response);
+        log.info("Successfully generated {} quiz questions", quizzes.size());
+        return quizzes;
     }
     
     public String generateStudyPlan(List<Map<String, Object>> courses, List<Map<String, Object>> exams) {
@@ -344,22 +351,31 @@ public class AIService {
     
     private String callAI(String prompt, String purpose) {
         try {
+            log.info("Calling AI for purpose: {}", purpose);
+            log.debug("AI Model: {}, OpenAI Key available: {}", preferredModel, !openAiApiKey.isEmpty());
+            
             if ("openai".equalsIgnoreCase(preferredModel) && !openAiApiKey.isEmpty()) {
+                log.info("Using OpenAI API for {}", purpose);
                 return callOpenAI(prompt);
             } else if ("claude".equalsIgnoreCase(preferredModel) && !claudeApiKey.isEmpty()) {
+                log.info("Using Claude API for {}", purpose);
                 return callClaude(prompt);
             } else {
                 log.warn("No AI API key configured. Using mock response for: {}", purpose);
                 return getMockResponse(purpose);
             }
         } catch (Exception e) {
-            log.error("Error calling AI API: ", e);
+            log.error("Error calling AI API for {}: {}", purpose, e.getMessage(), e);
+            log.error("Falling back to mock response");
             return getMockResponse(purpose);
         }
     }
     
     private String callOpenAI(String prompt) {
-        log.debug("Calling OpenAI API with prompt length: {}", prompt.length());
+        log.info("Starting OpenAI API call");
+        log.debug("OpenAI API URL: {}", openAiUrl);
+        log.debug("API Key length: {}", openAiApiKey.length());
+        log.debug("Prompt length: {} characters", prompt.length());
         
         WebClient webClient = webClientBuilder
                 .baseUrl(openAiUrl)
@@ -368,7 +384,7 @@ public class AIService {
                 .build();
         
         Map<String, Object> requestBody = Map.of(
-                "model", "gpt-4o-mini",
+                "model", "gpt-3.5-turbo",
                 "messages", List.of(
                         Map.of("role", "system", "content", 
                                 "You are an expert AI tutor specializing in university-level education. " +
@@ -384,17 +400,31 @@ public class AIService {
         );
         
         try {
+            log.info("Sending request to OpenAI API...");
             String response = webClient.post()
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
             
-            log.debug("OpenAI API response received");
-            return extractOpenAIResponse(response);
+            log.info("OpenAI API response received successfully");
+            log.debug("Response length: {} characters", response != null ? response.length() : 0);
+            
+            String extractedContent = extractOpenAIResponse(response);
+            log.debug("Extracted content length: {} characters", extractedContent.length());
+            
+            return extractedContent;
         } catch (Exception e) {
-            log.error("Error calling OpenAI API: ", e);
-            throw new RuntimeException("Failed to call OpenAI API", e);
+            log.error("Error calling OpenAI API: {}", e.getMessage());
+            log.error("Full error details: ", e);
+            if (e.getMessage() != null && e.getMessage().contains("401")) {
+                log.error("Authentication error - API key may be invalid or expired");
+            } else if (e.getMessage() != null && e.getMessage().contains("429")) {
+                log.error("Rate limit exceeded");
+            } else if (e.getMessage() != null && e.getMessage().contains("500")) {
+                log.error("OpenAI server error");
+            }
+            throw new RuntimeException("Failed to call OpenAI API: " + e.getMessage(), e);
         }
     }
     

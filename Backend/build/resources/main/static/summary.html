@@ -425,20 +425,30 @@
 		<script src="js/breakpoints.min.js"></script>
 		<script src="js/util.js"></script>
 		<script src="js/main.js"></script>
-		<script src="assets/js/api.js"></script>
+		<!-- API script must be loaded first -->
+		<script src="js/api.js"></script>
 		<script src="js/sidebar-toggle.js"></script>
 		<script src="js/dark-mode.js"></script>
 		<script src="js/sidebar-state.js"></script>
 		<script src="js/pdf-viewer.js"></script>
+		<script src="js/modal-manager.js"></script>
 
 		<script>
-			// Add global debugging for window.API
-			window.addEventListener('DOMContentLoaded', function() {
+			// Wait for all scripts to load
+			window.addEventListener('load', function() {
+				console.log('Window loaded, checking API...');
 				console.log('API object:', window.API);
 				console.log('apiClient object:', window.apiClient);
-				if (window.API && window.API.materials) {
-					console.log('API.materials.upload:', window.API.materials.upload);
+				console.log('checkAuth function:', window.checkAuth);
+				
+				if (!window.API || !window.checkAuth) {
+					console.error('API not loaded properly!');
+					alert('Failed to load API. Please refresh the page.');
+					return;
 				}
+				
+				// Initialize page
+				initializePage();
 			});
 			
 			// Toggle Sidebar Function
@@ -457,7 +467,9 @@
 			}
 			
 			// Page initialization
-			document.addEventListener('DOMContentLoaded', async function() {
+			async function initializePage() {
+				console.log('Initializing page...');
+				
 				// Set initial sidebar state - always start closed
 				const sidebar = document.getElementById('sidebar');
 				sidebar.classList.add('inactive');
@@ -472,7 +484,7 @@
 				updateHeader();
 				await loadMaterials();
 				setupUploadArea();
-			});
+			}
 
 			function updateHeader() {
 				const headerActions = document.getElementById('headerActions');
@@ -560,49 +572,68 @@
 				// Show progress modal
 				const progressModal = showProgressModal('Uploading files...');
 				
-				for (let i = 0; i < files.length; i++) {
-					const file = files[i];
-					const progress = ((i + 1) / files.length) * 100;
+				// 병렬 업로드를 위한 배치 처리
+				const batchSize = 3; // 동시에 3개씩 업로드
+				const results = [];
+				
+				for (let i = 0; i < files.length; i += batchSize) {
+					const batch = files.slice(i, i + batchSize);
+					const batchPromises = batch.map(async (file, index) => {
+						const fileIndex = i + index;
+						
+						// 파일 검증
+						if (file.size > 100 * 1024 * 1024) {
+							return { success: false, file: file.name, error: 'File too large (max 100MB)' };
+						}
+						
+						const allowedTypes = ['.pdf', '.docx', '.pptx', '.txt'];
+						const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+						if (!allowedTypes.includes(fileExtension)) {
+							return { success: false, file: file.name, error: 'Unsupported format' };
+						}
+						
+						const title = file.name.replace(/\.[^/.]+$/, '');
+						
+						try {
+							// API 호출 - 개별 파라미터로 전달
+							const response = await API.materials.upload(file, title, className);
+							return { success: true, file: file.name };
+						} catch (error) {
+							console.error('Upload error for file:', file.name, error);
+							return { success: false, file: file.name, error: error.message };
+						}
+					});
+					
+					// 배치 업로드 실행
+					const batchResults = await Promise.all(batchPromises);
+					results.push(...batchResults);
+					
+					// 진행률 업데이트
+					const progress = ((i + batch.length) / files.length) * 100;
 					progressFill.style.width = progress + '%';
 					progressModal.updateProgress(progress);
-					progressModal.updateMessage(`Uploading ${file.name}... (${i + 1}/${files.length})`);
-					
-					// Validate file
-					if (file.size > 100 * 1024 * 1024) {
-						progressModal.showError(`${file.name} is too large (max 100MB)`);
-						await new Promise(resolve => setTimeout(resolve, 2000));
-						continue;
-					}
-					
-					const allowedTypes = [					const allowedTypes = ['.pdf', '.docx', '.pptx', '.txt'];
-					const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-					if (!allowedTypes.includes(fileExtension)) {
-						progressModal.showError(`${file.name} has unsupported format`);
-						await new Promise(resolve => setTimeout(resolve, 2000));
-						continue;
-					}
-					
-					const title = file.name.replace(/\.[^/.]+$/, '');
-					
-					try {
-						progressModal.updateMessage(`Processing ${file.name}...`);
-						// className을 제대로 전달
-						await API.materials.upload(file, title, className);
-						progressModal.updateMessage(`✓ ${file.name} uploaded successfully`);
-					} catch (error) {
-						progressModal.showError(`Failed to upload ${file.name}: ${error.message}`);
-						await new Promise(resolve => setTimeout(resolve, 2000));
-					}
+					progressModal.updateMessage(`Uploading... (${Math.min(i + batch.length, files.length)}/${files.length})`);
 				}
 				
-				progressModal.complete('All files processed!');
+				// 결과 표시
+				const successCount = results.filter(r => r.success).length;
+				const failCount = results.filter(r => !r.success).length;
+				
+				if (failCount > 0) {
+					progressModal.showError(`Uploaded ${successCount} files, ${failCount} failed`);
+				} else {
+					progressModal.complete(`All ${successCount} files uploaded successfully!`);
+				}
+				
 				setTimeout(() => {
 					progressModal.close();
 					progressBar.style.display = 'none';
 					progressFill.style.width = '0%';
 					document.getElementById('fileInput').value = '';
 					loadMaterials();
-				}, 1500);
+					// Start auto-refresh to check processing status
+					checkAndStartAutoRefresh();
+				}, 2000);
 			}
 
 			async function promptForClassName() {
@@ -691,12 +722,26 @@
 			let allMaterials = [];
 
 			async function loadMaterials() {
+				console.log('Loading materials...');
 				try {
 					allMaterials = await API.materials.list();
+					console.log('Loaded materials:', allMaterials);
 					updateClassFilter();
 					filterAndDisplayMaterials();
 				} catch (error) {
 					console.error('Failed to load materials:', error);
+					// Show error in UI
+					const container = document.getElementById('materialsContainer');
+					container.innerHTML = `
+						<div class="empty-state">
+							<i class="fas fa-exclamation-triangle" style="color: #f44336;"></i>
+							<h3>Failed to load materials</h3>
+							<p>${error.message}</p>
+							<button class="action-btn btn-primary" onclick="location.reload()">
+								<i class="fas fa-redo"></i> Reload Page
+							</button>
+						</div>
+					`;
 				}
 			}
 
@@ -819,7 +864,8 @@
 			document.getElementById('searchFilter').addEventListener('input', filterAndDisplayMaterials);
 
 			async function generateSummary(materialId) {
-				const btn = event.target;
+				// Get the button element properly
+				const btn = event.target.closest('button') || event.target;
 				const originalHTML = btn.innerHTML;
 				btn.innerHTML = '<span class="spinner"></span> Generating...';
 				btn.disabled = true;
@@ -828,8 +874,20 @@
 				const progressNotification = showProgressNotification('Generating summary...');
 				
 				try {
-					const response = await apiClient.post(`/materials/${materialId}/regenerate-summary`, {});
-					if (!response.ok) throw new Error('Failed to generate summary');
+					// 올바른 엔드포인트 사용
+					const response = await fetch(`${API_BASE_URL}/materials/${materialId}/summary`, {
+						method: 'POST',
+						headers: {
+							'Authorization': `Bearer ${TokenManager.getToken()}`
+						}
+					});
+					
+					if (!response.ok) {
+						const error = await response.text();
+						throw new Error(error || 'Failed to generate summary');
+					}
+					
+					const data = await response.json();
 					
 					progressNotification.update('Summary generated successfully!', 'success');
 					setTimeout(() => {
@@ -837,6 +895,7 @@
 						loadMaterials();
 					}, 2000);
 				} catch (error) {
+					console.error('Summary generation error:', error);
 					progressNotification.update('Failed to generate summary: ' + error.message, 'error');
 					btn.innerHTML = originalHTML;
 					btn.disabled = false;
@@ -909,12 +968,50 @@
 				}
 
 				try {
-					await API.materials.generateQuizzes(materialId, questionCount, difficulty);
+					// 퀴즈 생성 시작
+					const response = await API.materials.generateQuizzes(materialId, questionCount, difficulty);
+					
+					// 성공하면 퀴즈 페이지로 이동
 					progressNotification.update('Quiz created successfully!', 'success');
 					setTimeout(() => {
 						progressNotification.remove();
 						window.location.href = 'quiz.html';
 					}, 1500);
+					
+				} catch (error) {
+					// 폴링으로 상태 확인 (백그라운드 처리인 경우)
+					if (error.message.includes('processing')) {
+						let checkCount = 0;
+						const checkInterval = setInterval(async () => {
+							checkCount++;
+							
+							try {
+								const quizzes = await API.quizzes.list();
+								const materialQuizzes = quizzes.filter(q => 
+									q.material && q.material.id === materialId
+								);
+								
+								// 이전 체크보다 퀴즈가 늘어났으면 성공
+								if (materialQuizzes.length > 0) { 
+									clearInterval(checkInterval);
+									progressNotification.update('Quiz created successfully!', 'success');
+									setTimeout(() => {
+										progressNotification.remove();
+										window.location.href = 'quiz.html';
+									}, 1500);
+								} else if (checkCount > 12) { // 최대 1분 대기
+									clearInterval(checkInterval);
+									throw new Error('Quiz generation timed out. Please try again.');
+								}
+							} catch (error) {
+								clearInterval(checkInterval);
+								throw error;
+							}
+						}, 5000); // 5초마다 확인
+					} else {
+						// 일반 에러
+						throw error;
+					}
 				} catch (error) {
 					progressNotification.update('Failed to generate quiz: ' + error.message, 'error');
 					if (targetBtn) {
@@ -928,16 +1025,29 @@
 			async function deleteMaterial(materialId) {
 				if (!confirm('Are you sure you want to delete this material? This cannot be undone.')) return;
 				
+				const btn = event.target.closest('button');
+				const originalHTML = btn.innerHTML;
+				btn.innerHTML = '<span class="spinner"></span> Deleting...';
+				btn.disabled = true;
+				
 				try {
-					await API.materials.delete(materialId);
-					// Animate removal
-					const card = event.target.closest('.material-card');
+					const response = await API.materials.delete(materialId);
+					
+					// 성공 시 UI에서 즉시 제거
+					const card = btn.closest('.material-card');
 					card.style.opacity = '0';
 					card.style.transform = 'scale(0.9)';
+					
 					setTimeout(() => {
-						loadMaterials();
+						// 로컬 배열에서도 제거
+						allMaterials = allMaterials.filter(m => m.id !== materialId);
+						filterAndDisplayMaterials();
+						showNotification('Material deleted successfully!');
 					}, 300);
 				} catch (error) {
+					console.error('Delete error:', error);
+					btn.innerHTML = originalHTML;
+					btn.disabled = false;
 					alert('Failed to delete material: ' + error.message);
 				}
 			}
@@ -1115,7 +1225,28 @@
 				};
 			}
 
-			function editMaterial(materialId, currentTitle, currentClassName) {
+			async function editMaterial(materialId, currentTitle, currentClassName) {
+				// 기존 클래스 목록 가져오기
+				const materials = await API.materials.list();
+				const classes = new Set();
+				
+				materials.forEach(m => {
+					if (m.className) classes.add(m.className);
+				});
+				
+				// Study Plan에서도 클래스 가져오기
+				try {
+					const studyPlans = await API.studyPlans.getAll();
+					studyPlans.forEach(plan => {
+						if (plan.className) classes.add(plan.className);
+						if (plan.type === 'class') classes.add(plan.title);
+					});
+				} catch (e) {
+					console.log('Could not fetch study plans for class list');
+				}
+				
+				const uniqueClasses = [...classes].sort();
+				
 				const modal = document.createElement('div');
 				modal.innerHTML = `
 					<div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
@@ -1126,8 +1257,19 @@
 								<input type="text" id="editTitle" value="${currentTitle}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
 							</div>
 							<div style="margin-bottom: 20px;">
-								<label style="display: block; margin-bottom: 5px; color: #495057;">Class Name:</label>
-								<input type="text" id="editClassName" value="${currentClassName}" placeholder="e.g., CS101, Math 202" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+								<label style="display: block; margin-bottom: 5px; color: #495057;">Class:</label>
+								${uniqueClasses.length > 0 ? `
+									<select id="editClassSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">
+										<option value="">-- Select existing class --</option>
+										${uniqueClasses.map(cls => 
+											`<option value="${cls}" ${cls === currentClassName ? 'selected' : ''}>${cls}</option>`
+										).join('')}
+										<option value="__new__">+ Add new class</option>
+									</select>
+								` : ''}
+								<input type="text" id="editClassName" value="${currentClassName}" placeholder="Enter class name" 
+									   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; 
+									   ${uniqueClasses.includes(currentClassName) ? 'display: none;' : ''}">
 							</div>
 							<div style="display: flex; gap: 10px; justify-content: flex-end;">
 								<button onclick="this.closest('div').parentElement.remove()" style="padding: 10px 20px; border: 1px solid #ddd; background: white; border-radius: 5px; cursor: pointer;">Cancel</button>
@@ -1138,13 +1280,42 @@
 				`;
 				document.body.appendChild(modal);
 				
+				// Add event listener for class select
+				if (uniqueClasses.length > 0) {
+					const select = document.getElementById('editClassSelect');
+					const input = document.getElementById('editClassName');
+					
+					select.addEventListener('change', (e) => {
+						if (e.target.value === '__new__') {
+							input.style.display = 'block';
+							input.value = '';
+							input.focus();
+						} else if (e.target.value) {
+							input.style.display = 'none';
+							input.value = e.target.value;
+						} else {
+							input.style.display = 'block';
+						}
+					});
+				}
+				
 				// Focus on title input
 				setTimeout(() => document.getElementById('editTitle').focus(), 100);
 			}
 			
 			async function saveEditMaterial(materialId) {
 				const title = document.getElementById('editTitle').value.trim();
-				const className = document.getElementById('editClassName').value.trim();
+				const classInput = document.getElementById('editClassName');
+				const classSelect = document.getElementById('editClassSelect');
+				
+				let className = '';
+				if (classSelect && classInput.style.display !== 'none') {
+					className = classInput.value.trim();
+				} else if (classSelect) {
+					className = classSelect.value === '__new__' ? classInput.value.trim() : classSelect.value;
+				} else {
+					className = classInput.value.trim();
+				}
 				
 				if (!title) {
 					alert('Title is required');
@@ -1176,17 +1347,52 @@
 				window.open(`/pdf-viewer.html?id=${materialId}`, '_blank');
 			}
 			
-			// Auto-refresh materials every 10 seconds if any are processing
-			setInterval(async () => {
+			// Auto-refresh materials every 5 seconds if any are processing
+			let refreshInterval;
+			
+			function startAutoRefresh() {
+				if (refreshInterval) return;
+				
+				refreshInterval = setInterval(async () => {
+					try {
+						const materials = await API.materials.list();
+						const hasProcessing = materials.some(m => m.status === 'PROCESSING');
+						
+						if (hasProcessing) {
+							console.log('Found materials still processing, refreshing...');
+							allMaterials = materials;
+							filterAndDisplayMaterials();
+						} else {
+							console.log('No materials processing, stopping auto-refresh');
+							stopAutoRefresh();
+						}
+					} catch (error) {
+						console.error('Auto-refresh error:', error);
+					}
+				}, 5000); // 10초에서 5초로 단축
+			}
+			
+			function stopAutoRefresh() {
+				if (refreshInterval) {
+					clearInterval(refreshInterval);
+					refreshInterval = null;
+				}
+			}
+			
+			// Check for processing materials on load
+			async function checkAndStartAutoRefresh() {
 				try {
 					const materials = await API.materials.list();
 					if (materials.some(m => m.status === 'PROCESSING')) {
-						loadMaterials();
+						startAutoRefresh();
 					}
 				} catch (error) {
-					// Silent fail for auto-refresh
+					console.error('Error checking materials:', error);
 				}
-			}, 10000);
+			}
+			
+			// Call this after initial load
+			setTimeout(checkAndStartAutoRefresh, 1000);
 		</script>
 	</body>
 </html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Study Plan API Test</title>
+</head>
+<body>
+    <h1>Study Plan API Test</h1>
+    <button onclick="testCreateStudyPlan()">Test Create Study Plan</button>
+    <pre id="result"></pre>
+
+    <script>
+        // Test token (replace with actual token)
+        const token = localStorage.getItem('token') || 'your-test-token';
+        
+        async function testCreateStudyPlan() {
+            const testPlan = {
+                title: "테스트 일정 2",
+                type: "study",
+                date: "2025-06-20",
+                startTime: "14:00:00",
+                endTime: "16:00:00",
+                allDay: false,
+                color: "#667eea",
+                repeat: false,
+                className: "테스트"
+            };
+            
+            try {
+                console.log('Sending request:', testPlan);
+                const response = await fetch('http://localhost:8080/api/study-plans', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(testPlan)
+                });
+                
+                console.log('Response status:', response.status);
+                
+                const text = await response.text();
+                console.log('Response text:', text);
+                
+                if (text) {
+                    try {
+                        const json = JSON.parse(text);
+                        console.log('Parsed JSON:', json);
+                        
+                        // Check if date format is correct
+                        if (Array.isArray(json.date)) {
+                            console.error('Date is still an array:', json.date);
+                            console.log('Need to restart backend with Jackson config!');
+                        } else {
+                            console.log('Success! Date format is correct:', json.date);
+                        }
+                        
+                        document.getElementById('result').textContent = JSON.stringify(json, null, 2);
+                    } catch (e) {
+                        console.error('JSON parse error:', e);
+                        document.getElementById('result').textContent = 'Parse error: ' + e.message;
+                    }
+                } else {
+                    console.error('Empty response body!');
+                    document.getElementById('result').textContent = 'Empty response';
+                }
+                
+            } catch (error) {
+                console.error('Request failed:', error);
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        // Auto-test on load
+        window.onload = () => {
+            if (token && token !== 'your-test-token') {
+                testCreateStudyPlan();
+            } else {
+                document.getElementById('result').textContent = 'Please login first to get a token';
+            }
+        };
+    </script>
+</body>
+</html>

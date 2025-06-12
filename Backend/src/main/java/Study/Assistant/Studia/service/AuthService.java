@@ -38,32 +38,51 @@ public class AuthService {
     
     @Transactional
     public JwtAuthenticationResponse signup(SignupRequest request) {
-        // 이메일 중복 체크
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException("Email is already in use!");
+        try {
+            // 이메일 중복 체크
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new DuplicateEmailException("Email is already in use!");
+            }
+            
+            // 필수 필드 검증
+            if (request.getName() == null || request.getName().trim().isEmpty()) {
+                throw new IllegalArgumentException("Name is required");
+            }
+            if (request.getUniversity() == null || request.getUniversity().trim().isEmpty()) {
+                throw new IllegalArgumentException("University is required");
+            }
+            if (request.getPassword() == null || request.getPassword().length() < 6) {
+                throw new IllegalArgumentException("Password must be at least 6 characters long");
+            }
+            
+            // 사용자 생성
+            User user = User.builder()
+                    .email(request.getEmail())
+                    .password(passwordEncoder.encode(request.getPassword()))
+                    .name(request.getName())
+                    .university(request.getUniversity())
+                    .major(request.getMajor())
+                    .grade(request.getGrade())
+                    .role(UserRole.STUDENT)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+            
+            User savedUser = userRepository.save(user);
+            log.info("New user registered: {}", savedUser.getEmail());
+            
+            // 자동 로그인
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+            
+            return createTokenResponse(authentication, savedUser);
+        } catch (DuplicateEmailException e) {
+            throw e; // 이미 처리된 예외는 그대로 전달
+        } catch (Exception e) {
+            log.error("Signup failed for email: {}", request.getEmail(), e);
+            throw new RuntimeException("Failed to create account: " + e.getMessage(), e);
         }
-        
-        // 사용자 생성
-        User user = User.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .name(request.getName())
-                .university(request.getUniversity())
-                .major(request.getMajor())
-                .grade(request.getGrade())
-                .role(UserRole.STUDENT)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-        
-        User savedUser = userRepository.save(user);
-        
-        // 자동 로그인
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
-        
-        return createTokenResponse(authentication, savedUser);
     }
     
     @Transactional(readOnly = true)

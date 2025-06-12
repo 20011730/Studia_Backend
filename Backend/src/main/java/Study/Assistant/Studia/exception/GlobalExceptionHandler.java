@@ -52,8 +52,51 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception e) {
-        log.error("Unexpected error occurred", e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+        log.error("Unexpected error occurred: {}", e.getMessage(), e);
+        
+        // 개발 환경에서는 상세한 오류 메시지 제공
+        String message = "An unexpected error occurred";
+        if (e.getMessage() != null && !e.getMessage().isEmpty()) {
+            // 민감한 정보가 포함될 수 있으므로 특정 패턴만 노출
+            if (e.getMessage().contains("duplicate") || 
+                e.getMessage().contains("constraint") ||
+                e.getMessage().contains("validation") ||
+                e.getMessage().contains("not found")) {
+                message = e.getMessage();
+            }
+        }
+        
+        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, message);
+    }
+    
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException e) {
+        log.error("Runtime error occurred: {}", e.getMessage(), e);
+        
+        // 특정 런타임 예외 처리
+        if (e.getMessage() != null) {
+            if (e.getMessage().contains("not found")) {
+                return createErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
+            } else if (e.getMessage().contains("unauthorized") || e.getMessage().contains("Unauthorized")) {
+                return createErrorResponse(HttpStatus.UNAUTHORIZED, e.getMessage());
+            } else if (e.getMessage().contains("Invalid") || e.getMessage().contains("validation")) {
+                return createErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+            }
+        }
+        
+        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage() != null ? e.getMessage() : "Internal server error");
+    }
+    
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException e) {
+        log.error("Illegal argument: {}", e.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+    
+    @ExceptionHandler(NumberFormatException.class)
+    public ResponseEntity<Map<String, Object>> handleNumberFormat(NumberFormatException e) {
+        log.error("Number format error: {}", e.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "Invalid number format");
     }
     
     private ResponseEntity<Map<String, Object>> createErrorResponse(HttpStatus status, String message) {

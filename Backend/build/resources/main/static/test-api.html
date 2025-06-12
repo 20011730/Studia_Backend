@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Connection Test</title>
+    <meta charset="utf-8" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            background: #f9f9f9;
+            border-left: 3px solid #ddd;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .log-entry.success {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Studia API Connection Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Basic Configuration</h2>
+        <div id="config-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Direct API Tests</h2>
+        <button onclick="testDirectHealth()">Test Health Endpoint</button>
+        <button onclick="testDirectAuth()">Test Auth Endpoint</button>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="testSignup()">Test Signup</button>
+        <div id="api-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. API Module Status</h2>
+        <div id="module-status"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Console Log</h2>
+        <div id="console-log"></div>
+    </div>
+
+    <script>
+        // Override console.log to display in page
+        const logContainer = document.getElementById('console-log');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function addLogEntry(message, type = 'log') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            
+            // Keep original console functionality
+            if (type === 'error') {
+                originalError(message);
+            } else {
+                originalLog(message);
+            }
+        }
+        
+        console.log = function(...args) {
+            addLogEntry(args.join(' '), 'log');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addLogEntry(args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        // Configuration check
+        function checkConfig() {
+            const configDiv = document.getElementById('config-status');
+            const config = {
+                'Base URL': window.location.origin,
+                'API Base URL (Expected)': 'http://localhost:8080/api',
+                'Frontend URL': window.location.href,
+                'Protocol': window.location.protocol,
+                'Hostname': window.location.hostname,
+                'Port': window.location.port || (window.location.protocol === 'https:' ? '443' : '80')
+            };
+            
+            let html = '<h3>Environment Configuration:</h3><pre>';
+            for (const [key, value] of Object.entries(config)) {
+                html += `${key}: ${value}\n`;
+            }
+            html += '</pre>';
+            
+            configDiv.innerHTML = html;
+        }
+        
+        // Direct API test
+        async function testDirectHealth() {
+            console.log('Testing direct health endpoint...');
+            const resultsDiv = document.getElementById('api-results');
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/health', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+                
+                console.log(`Health check response status: ${response.status}`);
+                const data = await response.text();
+                
+                resultsDiv.innerHTML += `
+                    <div class="success">
+                        <h4>✓ Health Check Success</h4>
+                        <pre>Status: ${response.status}\nResponse: ${data}</pre>
+                    </div>
+                `;
+                
+                addLogEntry('Health check successful', 'success');
+            } catch (error) {
+                resultsDiv.innerHTML += `
+                    <div class="error">
+                        <h4>✗ Health Check Failed</h4>
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+                
+                addLogEntry(`Health check failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testDirectAuth() {
+            console.log('Testing auth test endpoint...');
+            const resultsDiv = document.getElementById('api-results');
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/test', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+                
+                console.log(`Auth test response status: ${response.status}`);
+                const data = await response.text();
+                
+                resultsDiv.innerHTML += `
+                    <div class="success">
+                        <h4>✓ Auth Test Success</h4>
+                        <pre>Status: ${response.status}\nResponse: ${data}</pre>
+                    </div>
+                `;
+                
+                addLogEntry('Auth test successful', 'success');
+            } catch (error) {
+                resultsDiv.innerHTML += `
+                    <div class="error">
+                        <h4>✗ Auth Test Failed</h4>
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+                
+                addLogEntry(`Auth test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testLogin() {
+            console.log('Testing login endpoint...');
+            const resultsDiv = document.getElementById('api-results');
+            
+            const loginData = {
+                email: 'demo@studia.com',
+                password: 'Demo1234!'
+            };
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(loginData),
+                    mode: 'cors'
+                });
+                
+                console.log(`Login response status: ${response.status}`);
+                const data = await response.text();
+                
+                resultsDiv.innerHTML += `
+                    <div class="${response.ok ? 'success' : 'error'}">
+                        <h4>${response.ok ? '✓' : '✗'} Login Test</h4>
+                        <pre>Status: ${response.status}\nResponse: ${data}</pre>
+                    </div>
+                `;
+                
+                if (response.ok) {
+                    addLogEntry('Login test successful', 'success');
+                } else {
+                    addLogEntry(`Login test returned ${response.status}`, 'error');
+                }
+            } catch (error) {
+                resultsDiv.innerHTML += `
+                    <div class="error">
+                        <h4>✗ Login Test Failed</h4>
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+                
+                addLogEntry(`Login test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testSignup() {
+            console.log('Testing signup endpoint...');
+            const resultsDiv = document.getElementById('api-results');
+            
+            const signupData = {
+                email: `test${Date.now()}@example.com`,
+                password: 'Test1234!',
+                name: 'Test User',
+                university: 'Test University'
+            };
+            
+            try {
+                const response = await fetch('http://localhost:8080/api/auth/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(signupData),
+                    mode: 'cors'
+                });
+                
+                console.log(`Signup response status: ${response.status}`);
+                const data = await response.text();
+                
+                resultsDiv.innerHTML += `
+                    <div class="${response.ok ? 'success' : 'error'}">
+                        <h4>${response.ok ? '✓' : '✗'} Signup Test</h4>
+                        <pre>Status: ${response.status}\nResponse: ${data}</pre>
+                    </div>
+                `;
+                
+                if (response.ok) {
+                    addLogEntry('Signup test successful', 'success');
+                } else {
+                    addLogEntry(`Signup test returned ${response.status}`, 'error');
+                }
+            } catch (error) {
+                resultsDiv.innerHTML += `
+                    <div class="error">
+                        <h4>✗ Signup Test Failed</h4>
+                        <pre>Error: ${error.message}</pre>
+                    </div>
+                `;
+                
+                addLogEntry(`Signup test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Check module status
+        function checkModules() {
+            const moduleDiv = document.getElementById('module-status');
+            const modules = {
+                'jQuery': typeof $ !== 'undefined',
+                'StudiaConfig': typeof window.StudiaConfig !== 'undefined',
+                'API': typeof window.API !== 'undefined',
+                'API.auth': window.API && typeof window.API.auth !== 'undefined',
+                'API.auth.login': window.API && window.API.auth && typeof window.API.auth.login === 'function',
+                'API.auth.signup': window.API && window.API.auth && typeof window.API.auth.signup === 'function',
+                'TokenManager': typeof window.TokenManager !== 'undefined',
+                'checkAuth': typeof window.checkAuth === 'function'
+            };
+            
+            let html = '<h3>Module Load Status:</h3>';
+            for (const [module, loaded] of Object.entries(modules)) {
+                html += `<div class="${loaded ? 'success' : 'error'}">
+                    ${loaded ? '✓' : '✗'} ${module}: ${loaded ? 'Loaded' : 'Not loaded'}
+                </div>`;
+            }
+            
+            moduleDiv.innerHTML = html;
+        }
+        
+        // Load API modules
+        function loadAPIModules() {
+            console.log('Loading API modules...');
+            
+            const scripts = [
+                'assets/js/config.js',
+                'assets/js/init.js',
+                'assets/js/api.js'
+            ];
+            
+            let index = 0;
+            
+            function loadNext() {
+                if (index >= scripts.length) {
+                    console.log('All scripts loaded');
+                    setTimeout(checkModules, 1000);
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = scripts[index];
+                script.onload = () => {
+                    console.log(`Loaded: ${scripts[index]}`);
+                    index++;
+                    loadNext();
+                };
+                script.onerror = () => {
+                    console.error(`Failed to load: ${scripts[index]}`);
+                    index++;
+                    loadNext();
+                };
+                document.body.appendChild(script);
+            }
+            
+            loadNext();
+        }
+        
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('API Test Page Loaded');
+            checkConfig();
+            checkModules();
+            loadAPIModules();
+        });
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ package Study.Assistant.Studia.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -63,9 +64,28 @@ public class StudyMaterial {
     private ProcessingStatus status = ProcessingStatus.UPLOADED;
     
     @CreatedDate
+    @Column(updatable = false)
     private LocalDateTime createdAt;
     
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+    
     private LocalDateTime processedAt;
+    
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = LocalDateTime.now();
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
     
     public enum ProcessingStatus {
         UPLOADED, PROCESSING, COMPLETED, FAILED

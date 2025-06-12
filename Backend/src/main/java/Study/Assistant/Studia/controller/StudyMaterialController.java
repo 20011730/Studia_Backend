@@ -96,4 +96,13 @@ public class StudyMaterialController {
         MaterialSummaryResponse response = studyMaterialService.regenerateSummary(id);
         return ResponseEntity.ok(response);
     }
+    
+    /**
+     * 요약 재생성 (새 엔드포인트)
+     */
+    @PostMapping("/{id}/summary")
+    public ResponseEntity<MaterialSummaryResponse> generateSummary(@PathVariable Long id) {
+        MaterialSummaryResponse response = studyMaterialService.regenerateSummary(id);
+        return ResponseEntity.ok(response);
+    }
 }

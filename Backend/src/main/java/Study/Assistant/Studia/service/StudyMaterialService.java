@@ -38,8 +38,17 @@ public class StudyMaterialService {
     public MaterialSummaryResponse processMaterial(MultipartFile file, Long courseId, String title, String className) {
         try {
             // 입력 검증
-            if (file.isEmpty()) {
-                throw new IllegalArgumentException("File is empty");
+            if (file == null || file.isEmpty()) {
+                throw new IllegalArgumentException("File is empty or not provided");
+            }
+            
+            // 파일 타입 검증
+            String contentType = file.getContentType();
+            if (contentType == null || (!contentType.contains("pdf") && 
+                !contentType.contains("text") && 
+                !contentType.contains("document") &&
+                !contentType.contains("sheet"))) {
+                throw new IllegalArgumentException("Unsupported file type: " + contentType);
             }
             
             String sanitizedTitle = inputSanitizer.sanitizeHtml(title);
@@ -54,15 +63,27 @@ public class StudyMaterialService {
                 throw new IllegalArgumentException("File size exceeds 100MB limit");
             }
             
+            log.info("Processing file: {} ({}), size: {} bytes", 
+                    file.getOriginalFilename(), contentType, file.getSize());
+            
             // 1. 파일에서 텍스트 추출
             String content = fileProcessingService.extractTextFromFile(file);
+            
+            if (content == null || content.trim().isEmpty()) {
+                throw new RuntimeException("Failed to extract content from file");
+            }
             
             // 2. 현재 로그인한 사용자 정보 가져오기
             org.springframework.security.core.Authentication auth = 
                 org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            
+            if (auth == null || !auth.isAuthenticated()) {
+                throw new RuntimeException("User not authenticated");
+            }
+            
             String email = auth.getName();
             User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("User not found: " + email));
             
             // 3. StudyMaterial 엔티티 생성 및 저장
             StudyMaterial material = StudyMaterial.builder()
@@ -78,24 +99,40 @@ public class StudyMaterialService {
                     .build();
             
             material = studyMaterialRepository.save(material);
+            log.info("Material saved with ID: {}", material.getId());
             
-            // 3. AI를 사용하여 요약 생성
-            String summary = aiService.generateSummary(content);
-            material.setSummary(summary);
-            
-            // 4. 핵심 포인트 추출
-            List<String> keyPoints = aiService.extractKeyPoints(content);
-            material.setKeyPoints(String.join("\n", keyPoints));
-            material.setStatus(StudyMaterial.ProcessingStatus.COMPLETED);
-            material.setProcessedAt(LocalDateTime.now());
-            
-            material = studyMaterialRepository.save(material);
+            try {
+                // 3. AI를 사용하여 요약 생성
+                String summary = aiService.generateSummary(content);
+                material.setSummary(summary);
+                
+                // 4. 핵심 포인트 추출
+                List<String> keyPoints = aiService.extractKeyPoints(content);
+                material.setKeyPoints(String.join("\n", keyPoints));
+                material.setStatus(StudyMaterial.ProcessingStatus.COMPLETED);
+                material.setProcessedAt(LocalDateTime.now());
+                
+                material = studyMaterialRepository.save(material);
+                log.info("Material processing completed for ID: {}", material.getId());
+                
+            } catch (Exception aiError) {
+                log.error("AI processing failed for material ID: {}", material.getId(), aiError);
+                material.setStatus(StudyMaterial.ProcessingStatus.FAILED);
+                material.setSummary("AI processing failed. Please try regenerating the summary later.");
+                material = studyMaterialRepository.save(material);
+            }
             
             return convertToResponse(material);
             
         } catch (IOException e) {
-            log.error("Error processing file: {}", e.getMessage());
-            throw new RuntimeException("Failed to process file", e);
+            log.error("Error processing file: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to process file: " + e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid input: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during material processing: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to process material: " + e.getMessage(), e);
         }
     }
     

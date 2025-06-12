@@ -58,10 +58,24 @@ public class StudyPlanController {
      * Get a specific study plan
      */
     @GetMapping("/{id}")
-    public ResponseEntity<StudyPlanResponse> getStudyPlan(@PathVariable Long id) {
+    public ResponseEntity<StudyPlanResponse> getStudyPlan(@PathVariable String id) {
         log.info("Getting study plan with id: {}", id);
-        StudyPlanResponse plan = studyPlanService.getStudyPlan(id);
-        return ResponseEntity.ok(plan);
+        
+        // 문자열 ID 처리 (todo-로 시작하는 경우)
+        if (id.startsWith("todo-")) {
+            log.warn("Client-side generated ID requested: {}. Not found.", id);
+            throw new RuntimeException("Study plan not found");
+        }
+        
+        // 숫자 ID 처리
+        try {
+            Long numericId = Long.parseLong(id);
+            StudyPlanResponse plan = studyPlanService.getStudyPlan(numericId);
+            return ResponseEntity.ok(plan);
+        } catch (NumberFormatException e) {
+            log.error("Invalid study plan ID format: {}", id);
+            throw new RuntimeException("Invalid study plan ID format");
+        }
     }
     
     /**
@@ -69,21 +83,52 @@ public class StudyPlanController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<StudyPlanResponse> updateStudyPlan(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestBody StudyPlanRequest request) {
         log.info("Updating study plan {} with data: {}", id, request);
-        StudyPlanResponse response = studyPlanService.updateStudyPlan(id, request);
-        return ResponseEntity.ok(response);
+        
+        // 문자열 ID 처리 (todo-로 시작하는 경우)
+        if (id.startsWith("todo-")) {
+            log.warn("Client-side generated ID detected: {}. Creating new study plan instead.", id);
+            // todo-로 시작하는 ID는 클라이언트에서 생성한 것이므로 새로 생성
+            StudyPlanResponse response = studyPlanService.createStudyPlan(request);
+            return ResponseEntity.ok(response);
+        }
+        
+        // 숫자 ID 처리
+        try {
+            Long numericId = Long.parseLong(id);
+            StudyPlanResponse response = studyPlanService.updateStudyPlan(numericId, request);
+            return ResponseEntity.ok(response);
+        } catch (NumberFormatException e) {
+            log.error("Invalid study plan ID format: {}", id);
+            throw new RuntimeException("Invalid study plan ID format");
+        }
     }
     
     /**
      * Delete a study plan
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStudyPlan(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteStudyPlan(@PathVariable String id) {
         log.info("Deleting study plan with id: {}", id);
-        studyPlanService.deleteStudyPlan(id);
-        return ResponseEntity.noContent().build();
+        
+        // 문자열 ID 처리 (todo-로 시작하는 경우)
+        if (id.startsWith("todo-")) {
+            log.warn("Attempting to delete client-side generated ID: {}. Ignoring.", id);
+            // 클라이언트 생성 ID는 서버에 없으므로 성공으로 처리
+            return ResponseEntity.noContent().build();
+        }
+        
+        // 숫자 ID 처리
+        try {
+            Long numericId = Long.parseLong(id);
+            studyPlanService.deleteStudyPlan(numericId);
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            log.error("Invalid study plan ID format: {}", id);
+            throw new RuntimeException("Invalid study plan ID format");
+        }
     }
     
     /**
@@ -91,11 +136,25 @@ public class StudyPlanController {
      */
     @DeleteMapping("/{id}/recurring")
     public ResponseEntity<Void> deleteRecurringStudyPlans(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam(required = false) String groupId) {
         log.info("Deleting recurring study plans with id: {} and groupId: {}", id, groupId);
-        studyPlanService.deleteRecurringStudyPlans(id, groupId);
-        return ResponseEntity.noContent().build();
+        
+        // 문자열 ID 처리 (todo-로 시작하는 경우)
+        if (id.startsWith("todo-")) {
+            log.warn("Attempting to delete client-side generated recurring ID: {}. Ignoring.", id);
+            return ResponseEntity.noContent().build();
+        }
+        
+        // 숫자 ID 처리
+        try {
+            Long numericId = Long.parseLong(id);
+            studyPlanService.deleteRecurringStudyPlans(numericId, groupId);
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            log.error("Invalid study plan ID format: {}", id);
+            throw new RuntimeException("Invalid study plan ID format");
+        }
     }
     
     /**
@@ -103,11 +162,26 @@ public class StudyPlanController {
      */
     @PutMapping("/{id}/recurring")
     public ResponseEntity<List<StudyPlanResponse>> updateRecurringStudyPlans(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam(required = false) String groupId,
             @RequestBody StudyPlanRequest request) {
         log.info("Updating recurring study plans with id: {} and groupId: {}", id, groupId);
-        List<StudyPlanResponse> responses = studyPlanService.updateRecurringStudyPlans(id, groupId, request);
-        return ResponseEntity.ok(responses);
+        
+        // 문자열 ID 처리 (todo-로 시작하는 경우)
+        if (id.startsWith("todo-")) {
+            log.warn("Client-side generated ID detected for recurring update: {}. Creating new instead.", id);
+            StudyPlanResponse response = studyPlanService.createStudyPlan(request);
+            return ResponseEntity.ok(List.of(response));
+        }
+        
+        // 숫자 ID 처리
+        try {
+            Long numericId = Long.parseLong(id);
+            List<StudyPlanResponse> responses = studyPlanService.updateRecurringStudyPlans(numericId, groupId, request);
+            return ResponseEntity.ok(responses);
+        } catch (NumberFormatException e) {
+            log.error("Invalid study plan ID format: {}", id);
+            throw new RuntimeException("Invalid study plan ID format");
+        }
     }
 }
