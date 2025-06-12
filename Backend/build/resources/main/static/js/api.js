@@ -555,6 +555,18 @@ const API = {
             const response = await apiClient.get('/quiz/history');
             if (!response.ok) throw new Error('Failed to fetch quiz history');
             return await response.json();
+        },
+        
+        getAttemptDetail: async (attemptId) => {
+            const response = await apiClient.get(`/quizzes/attempts/${attemptId}`);
+            if (!response.ok) throw new Error('Failed to fetch attempt detail');
+            return await response.json();
+        },
+        
+        getLastAttempt: async (materialId) => {
+            const response = await apiClient.get(`/quizzes/materials/${materialId}/last-attempt`);
+            if (!response.ok) throw new Error('Failed to fetch last attempt');
+            return await response.json();
         }
     },
     

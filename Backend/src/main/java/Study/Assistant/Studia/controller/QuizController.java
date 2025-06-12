@@ -98,6 +98,24 @@ public class QuizController {
     }
     
     /**
+     * 특정 시도의 상세 정보 조회
+     */
+    @GetMapping("/attempts/{attemptId}")
+    public ResponseEntity<QuizAttemptDetailResponse> getAttemptDetail(@PathVariable Long attemptId) {
+        QuizAttemptDetailResponse detail = quizService.getAttemptDetail(attemptId);
+        return ResponseEntity.ok(detail);
+    }
+    
+    /**
+     * 특정 학습 자료의 마지막 시도 정보 조회
+     */
+    @GetMapping("/materials/{materialId}/last-attempt")
+    public ResponseEntity<QuizAttemptDetailResponse> getLastAttempt(@PathVariable Long materialId) {
+        QuizAttemptDetailResponse detail = quizService.getLastAttemptForMaterial(materialId);
+        return ResponseEntity.ok(detail);
+    }
+    
+    /**
      * 학습 통계 조회
      */
     @GetMapping("/statistics")

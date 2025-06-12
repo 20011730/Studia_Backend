@@ -13,9 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,6 +51,41 @@ public class QuizService {
                     
                     if (material == null) return null;
                     
+                    // 해당 material의 모든 시도 가져오기
+                    List<QuizAttempt> materialAttempts = quizAttemptRepository
+                            .findByUserIdAndQuiz_StudyMaterial_Id(user.getId(), material.getId());
+                    
+                    // 시도를 세션별로 그룹화 (1분 이내의 시도들은 같은 세션으로 간주)
+                    List<List<QuizAttempt>> attemptSessions = groupAttemptsBySession(materialAttempts);
+                    int totalAttempts = attemptSessions.size();
+                    
+                    // 최고 점수 계산
+                    Double bestScore = 0.0;
+                    if (!attemptSessions.isEmpty()) {
+                        bestScore = attemptSessions.stream()
+                                .mapToDouble(session -> {
+                                    // 같은 세션의 중복 문제 제거
+                                    Set<Long> uniqueQuestions = session.stream()
+                                            .map(a -> a.getQuiz().getId())
+                                            .collect(Collectors.toSet());
+                                    
+                                    long correct = session.stream()
+                                            .filter(a -> uniqueQuestions.contains(a.getQuiz().getId()))
+                                            .collect(Collectors.groupingBy(a -> a.getQuiz().getId()))
+                                            .values().stream()
+                                            .map(list -> list.stream().filter(QuizAttempt::getIsCorrect).findFirst().isPresent() ? 1L : 0L)
+                                            .reduce(0L, Long::sum);
+                                    
+                                    int totalQuestions = entry.getValue().size();
+                                    if (totalQuestions == 0) return 0.0;
+                                    
+                                    double percentage = (double) correct / totalQuestions * 100;
+                                    return Math.min(percentage, 100.0); // 100%를 넘지 않도록 제한
+                                })
+                                .max()
+                                .orElse(0.0);
+                    }
+                    
                     return QuizResponse.builder()
                             .id(entry.getKey()) // Material ID as quiz group ID
                             .title(material.getTitle() + " Quiz")
@@ -59,14 +93,52 @@ public class QuizService {
                                     .id(material.getId())
                                     .title(material.getTitle())
                                     .originalFileName(material.getOriginalFileName())
+                                    .className(material.getClassName())
                                     .build())
                             .questionCount(entry.getValue().size())
-                            .attempts(quizAttemptRepository.countByUserIdAndQuiz_StudyMaterial_Id(
-                                    user.getId(), material.getId()))
+                            .attempts(totalAttempts)
+                            .totalAttempts(materialAttempts.size()) // 실제 DB 레코드 수
+                            .bestScore(Math.round(bestScore * 100.0) / 100.0) // 소수점 2자리
                             .build();
                 })
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * 시도들을 세션별로 그룹화 (1분 이내의 시도들은 같은 세션으로 간주)
+     */
+    private List<List<QuizAttempt>> groupAttemptsBySession(List<QuizAttempt> attempts) {
+        if (attempts.isEmpty()) return new ArrayList<>();
+        
+        // 시간순 정렬
+        List<QuizAttempt> sortedAttempts = attempts.stream()
+                .sorted((a, b) -> a.getAttemptedAt().compareTo(b.getAttemptedAt()))
+                .collect(Collectors.toList());
+        
+        List<List<QuizAttempt>> sessions = new ArrayList<>();
+        List<QuizAttempt> currentSession = new ArrayList<>();
+        LocalDateTime lastTime = null;
+        
+        for (QuizAttempt attempt : sortedAttempts) {
+            if (lastTime == null || 
+                ChronoUnit.MINUTES.between(lastTime, attempt.getAttemptedAt()) > 1) {
+                // 새로운 세션 시작
+                if (!currentSession.isEmpty()) {
+                    sessions.add(new ArrayList<>(currentSession));
+                }
+                currentSession = new ArrayList<>();
+            }
+            currentSession.add(attempt);
+            lastTime = attempt.getAttemptedAt();
+        }
+        
+        // 마지막 세션 추가
+        if (!currentSession.isEmpty()) {
+            sessions.add(currentSession);
+        }
+        
+        return sessions;
     }
     
     /**
@@ -296,6 +368,125 @@ public class QuizService {
         return wrongAttempts.stream()
                 .map(this::convertToWrongAnswerNote)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * 특정 시도의 상세 정보 조회
+     */
+    public QuizAttemptDetailResponse getAttemptDetail(Long attemptId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // 해당 시도 ID로 모든 QuizAttempt 가져오기
+        // (같은 시간에 제출된 같은 material의 모든 문제 시도)
+        List<QuizAttempt> attempts = quizAttemptRepository.findByUserId(user.getId());
+        
+        // attemptId와 같은 시간대의 시도들 찾기
+        QuizAttempt targetAttempt = attempts.stream()
+                .filter(a -> a.getId().equals(attemptId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
+        
+        // 같은 material의 같은 시간대 시도들 모두 가져오기
+        LocalDateTime attemptTime = targetAttempt.getAttemptedAt();
+        Long materialId = targetAttempt.getQuiz().getStudyMaterial().getId();
+        
+        List<QuizAttempt> materialAttempts = attempts.stream()
+                .filter(a -> a.getQuiz().getStudyMaterial().getId().equals(materialId))
+                .filter(a -> Math.abs(ChronoUnit.SECONDS.between(a.getAttemptedAt(), attemptTime)) < 60) // 1분 이내
+                .collect(Collectors.toList());
+        
+        return buildAttemptDetailResponse(materialAttempts);
+    }
+    
+    /**
+     * 특정 학습 자료의 마지막 시도 정보 조회
+     */
+    public QuizAttemptDetailResponse getLastAttemptForMaterial(Long materialId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // 해당 material의 모든 시도 가져오기
+        List<QuizAttempt> attempts = quizAttemptRepository
+                .findByUserIdAndQuiz_StudyMaterial_Id(user.getId(), materialId);
+        
+        if (attempts.isEmpty()) {
+            throw new RuntimeException("No attempts found for this material");
+        }
+        
+        // 가장 최근 시도 시간 찾기
+        LocalDateTime lastAttemptTime = attempts.stream()
+                .map(QuizAttempt::getAttemptedAt)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+        
+        // 해당 시간대의 모든 시도 가져오기 (같은 세션의 시도들)
+        List<QuizAttempt> lastSessionAttempts = attempts.stream()
+                .filter(a -> Math.abs(ChronoUnit.SECONDS.between(a.getAttemptedAt(), lastAttemptTime)) < 60) // 1분 이내
+                .collect(Collectors.toList());
+        
+        return buildAttemptDetailResponse(lastSessionAttempts);
+    }
+    
+    /**
+     * QuizAttemptDetailResponse 빌드
+     */
+    private QuizAttemptDetailResponse buildAttemptDetailResponse(List<QuizAttempt> attempts) {
+        if (attempts.isEmpty()) {
+            throw new RuntimeException("No attempts found");
+        }
+        
+        StudyMaterial material = attempts.get(0).getQuiz().getStudyMaterial();
+        LocalDateTime attemptTime = attempts.get(0).getAttemptedAt();
+        
+        // 각 문제별 시도 정보 생성
+        List<QuizAttemptDetailResponse.QuestionAttemptDetail> questionDetails = attempts.stream()
+                .map(attempt -> {
+                    Quiz quiz = attempt.getQuiz();
+                    int userSelectedOption = -1;
+                    
+                    // 사용자가 선택한 옵션의 인덱스 찾기
+                    if (attempt.getUserAnswer() != null && !attempt.getUserAnswer().isEmpty()) {
+                        userSelectedOption = quiz.getOptions().indexOf(attempt.getUserAnswer());
+                    }
+                    
+                    return QuizAttemptDetailResponse.QuestionAttemptDetail.builder()
+                            .questionId(quiz.getId())
+                            .questionText(quiz.getQuestion())
+                            .questionType(quiz.getQuestionType().toString())
+                            .difficulty(quiz.getDifficulty().toString())
+                            .options(quiz.getOptions())
+                            .correctOption(quiz.getOptions().indexOf(quiz.getCorrectAnswer()))
+                            .userSelectedOption(userSelectedOption)
+                            .userAnswer(attempt.getUserAnswer())
+                            .correctAnswer(quiz.getCorrectAnswer())
+                            .isCorrect(attempt.getIsCorrect())
+                            .explanation(quiz.getExplanation())
+                            .hint(quiz.getHint())
+                            .category(quiz.getCategory())
+                            .build();
+                })
+                .collect(Collectors.toList());
+        
+        int score = (int) attempts.stream().filter(QuizAttempt::getIsCorrect).count();
+        int total = attempts.size();
+        
+        // 임시로 duration 계산 (실제로는 시작/종료 시간 저장 필요)
+        int duration = 120 * total; // 문제당 2분 가정
+        
+        return QuizAttemptDetailResponse.builder()
+                .attemptId(attempts.get(0).getId())
+                .materialId(material.getId())
+                .materialTitle(material.getTitle())
+                .attemptedAt(attemptTime)
+                .duration(duration)
+                .score(score)
+                .totalQuestions(total)
+                .percentage((double) score / total * 100)
+                .questionAttempts(questionDetails)
+                .build();
     }
     
     /**

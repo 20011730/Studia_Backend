@@ -724,9 +724,14 @@
 									${bestScore > 0 ? `<span><i class="fas fa-trophy"></i> Best: ${Math.round(bestScore)}%</span>` : ''}
 								</div>
 								${attempts.length > 0 ? `
-									<button class="button small" style="margin-top: 10px;" onclick="viewPreviousAttempts(event, ${quiz.id})">
-										<i class="fas fa-history"></i> View History
-									</button>
+									<div style="display: flex; gap: 10px; margin-top: 10px;">
+										<button class="button small" onclick="viewPreviousAttempts(event, ${quiz.id})">
+											<i class="fas fa-history"></i> View History
+										</button>
+										<button class="button small primary" onclick="reviewLastAttempt(event, ${quiz.id})">
+											<i class="fas fa-eye"></i> Review Last Attempt
+										</button>
+									</div>
 								` : ''}
 							</div>
 						</div>
@@ -1081,6 +1086,168 @@
 			async function reviewAttempt(quizId, attemptId) {
 				// TODO: 서버에서 상세 시도 정보 가져오기
 				alert('Review feature coming soon!');
+			}
+			
+			// 마지막 시도 리뷰 함수
+			async function reviewLastAttempt(event, quizId) {
+				event.stopPropagation();
+				
+				try {
+					// 마지막 시도 정보 가져오기
+					const attemptDetail = await API.quiz.getLastAttempt(quizId);
+					
+					// 리뷰 모달 생성
+					showQuizReviewModal(attemptDetail);
+					
+				} catch (error) {
+					console.error('Failed to load review:', error);
+					alert('Failed to load review: ' + error.message);
+				}
+			}
+			
+			// 퀴즈 리뷰 모달 표시
+			function showQuizReviewModal(attemptDetail) {
+				// 모달 생성
+				const modal = document.createElement('div');
+				modal.style.cssText = `
+					position: fixed;
+					top: 0;
+					left: 0;
+					right: 0;
+					bottom: 0;
+					background: rgba(0,0,0,0.8);
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					z-index: 10000;
+					overflow-y: auto;
+					padding: 20px;
+				`;
+				
+				// 리뷰 컨테이너
+				const reviewContainer = document.createElement('div');
+				reviewContainer.style.cssText = `
+					background: white;
+					border-radius: 20px;
+					max-width: 900px;
+					width: 100%;
+					max-height: 90vh;
+					overflow-y: auto;
+					box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+				`;
+				
+				// 헤더
+				const header = `
+					<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 20px 20px 0 0; color: white;">
+						<h2 style="margin: 0 0 10px 0;">Quiz Review</h2>
+						<p style="margin: 0; opacity: 0.9;">
+							${attemptDetail.materialTitle} - Attempted on ${new Date(attemptDetail.attemptedAt).toLocaleString()}
+						</p>
+						<div style="margin-top: 20px; display: flex; gap: 20px;">
+							<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+								<strong style="display: block; font-size: 1.5em;">${attemptDetail.score}/${attemptDetail.totalQuestions}</strong>
+								<span>Score</span>
+							</div>
+							<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+								<strong style="display: block; font-size: 1.5em;">${Math.round(attemptDetail.percentage)}%</strong>
+								<span>Percentage</span>
+							</div>
+							<div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
+								<strong style="display: block; font-size: 1.5em;">${Math.floor(attemptDetail.duration / 60)}:${(attemptDetail.duration % 60).toString().padStart(2, '0')}</strong>
+								<span>Time</span>
+							</div>
+						</div>
+					</div>
+				`;
+				
+				// 질문들
+				const questionsHtml = attemptDetail.questionAttempts.map((qa, index) => {
+					return `
+						<div style="padding: 30px; border-bottom: 1px solid #eee;">
+							<div style="display: flex; align-items: start; gap: 15px; margin-bottom: 20px;">
+								<div style="background: ${qa.isCorrect ? '#4caf50' : '#f44336'}; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+									${qa.isCorrect ? '✓' : '✗'}
+								</div>
+								<div style="flex: 1;">
+									<h3 style="margin: 0 0 15px 0; color: #2c3e50;">
+										Question ${index + 1}: ${qa.questionText}
+									</h3>
+									<div style="margin-bottom: 15px;">
+										${qa.options.map((option, optIndex) => `
+											<div style="
+												padding: 12px 15px;
+												margin-bottom: 8px;
+												border-radius: 8px;
+												border: 2px solid ${
+													optIndex === qa.correctOption ? '#4caf50' : 
+													optIndex === qa.userSelectedOption && optIndex !== qa.correctOption ? '#f44336' : 
+													'transparent'
+												};
+												background: ${
+													optIndex === qa.correctOption ? 'rgba(76, 175, 80, 0.1)' : 
+													optIndex === qa.userSelectedOption && optIndex !== qa.correctOption ? 'rgba(244, 67, 54, 0.1)' : 
+													'#f8f9fa'
+												};
+											">
+												${option}
+												${optIndex === qa.correctOption ? ' <span style="color: #4caf50; font-weight: bold;">(Correct)</span>' : ''}
+												${optIndex === qa.userSelectedOption && optIndex !== qa.correctOption ? ' <span style="color: #f44336; font-weight: bold;">(Your answer)</span>' : ''}
+												${optIndex === qa.userSelectedOption && optIndex === qa.correctOption ? ' <span style="color: #4caf50; font-weight: bold;">(Your answer)</span>' : ''}
+											</div>
+										`).join('')}
+									</div>
+									${qa.explanation ? `
+										<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196f3;">
+											<strong style="color: #1976d2;"><i class="fas fa-lightbulb"></i> Explanation:</strong>
+											<p style="margin: 5px 0 0 0; color: #424242;">${qa.explanation}</p>
+										</div>
+									` : ''}
+									${!qa.isCorrect && qa.hint ? `
+										<div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800; margin-top: 10px;">
+											<strong style="color: #f57c00;"><i class="fas fa-info-circle"></i> Hint:</strong>
+											<p style="margin: 5px 0 0 0; color: #424242;">${qa.hint}</p>
+										</div>
+									` : ''}
+								</div>
+							</div>
+						</div>
+					`;
+				}).join('');
+				
+				// 푸터
+				const footer = `
+					<div style="padding: 20px 30px; background: #f8f9fa; border-radius: 0 0 20px 20px; text-align: center;">
+						<button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
+								style="padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">
+							Close Review
+						</button>
+						<button onclick="retakeQuiz(${attemptDetail.materialId})" 
+								style="padding: 12px 30px; background: #4caf50; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin-left: 10px;">
+							<i class="fas fa-redo"></i> Retake Quiz
+						</button>
+					</div>
+				`;
+				
+				reviewContainer.innerHTML = header + questionsHtml + footer;
+				modal.appendChild(reviewContainer);
+				document.body.appendChild(modal);
+				
+				// Click outside to close
+				modal.addEventListener('click', (e) => {
+					if (e.target === modal) {
+						modal.remove();
+					}
+				});
+			}
+			
+			// 퀴즈 다시 풀기
+			function retakeQuiz(quizId) {
+				// 모달 닫기
+				const modal = document.querySelector('div[style*="position: fixed"]');
+				if (modal) modal.remove();
+				
+				// 퀴즈 시작
+				startQuiz(quizId);
 			}
 		</script>
 	</body>
